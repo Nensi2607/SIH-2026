@@ -1,0 +1,647 @@
+export const roleOptions = [
+  { id: 'nationalOfficer', label: 'National / Ministry Officer', focus: 'National KPIs, state comparison, national alerts', jurisdiction: 'India' },
+  { id: 'stateOfficer', label: 'State Officer', focus: 'State projects, district progress, pending cases', jurisdiction: 'Uttar Pradesh' },
+  { id: 'districtOfficer', label: 'District / CALA Officer', focus: 'Parcels, objections, compensation, deadlines', jurisdiction: 'Varanasi' },
+  { id: 'gramPanchayatOfficer', label: 'Gram Panchayat Officer', focus: 'Village parcels, field verification, local evidence', jurisdiction: 'Varanasi' },
+  { id: 'citizen', label: 'Citizen / Landowner', focus: 'My parcel, compensation, grievance, next step', jurisdiction: 'Personal' },
+  { id: 'companyPartner', label: 'Company / Agency Partner', focus: 'Find government projects and submit work proposals', jurisdiction: 'India' },
+]
+
+export const userProfiles = [
+  { id: 'USR001', name: 'Anita Sharma', role: 'nationalOfficer', title: 'National Ministry Officer', jurisdiction: 'India' },
+  { id: 'USR002', name: 'Rajesh Patel', role: 'stateOfficer', title: 'State Officer', jurisdiction: 'Uttar Pradesh' },
+  { id: 'USR003', name: 'Priya Shah', role: 'districtOfficer', title: 'District / CALA Officer', jurisdiction: 'Varanasi' },
+  { id: 'USR004', name: 'Amit Solanki', role: 'gramPanchayatOfficer', title: 'Gram Panchayat Officer', jurisdiction: 'Varanasi', assignedParcelIds: ['ULPIN-UP-7812-004', 'ULPIN-UP-7812-011', 'ULPIN-UP-4821-220'] },
+  { id: 'USR005', name: 'Meera Joshi', role: 'rrAdministrator', title: 'R&R Administrator', jurisdiction: 'Varanasi' },
+  { id: 'USR006', name: 'Nitin Shah', role: 'financeOfficer', title: 'Finance Officer', jurisdiction: 'Uttar Pradesh' },
+  { id: 'USR007', name: 'Ramesh Patel', role: 'citizen', title: 'Citizen / Landowner', jurisdiction: 'Varanasi', parcelIds: ['ULPIN-UP-7812-004'] },
+  { id: 'ORG001', name: 'Arvind Mehta', role: 'companyPartner', title: 'Arvind Infrastructure Pvt. Ltd.', jurisdiction: 'India', company: 'Arvind Infrastructure Pvt. Ltd.' },
+]
+
+export const companyProfiles = {
+  'Arvind Infrastructure Pvt. Ltd.': {
+    legalName: 'Arvind Infrastructure Private Limited', registrationNumber: 'CIN: U45203DL2012PTC241908', headquarters: 'New Delhi, India', contact: 'procurement@arvindinfra.example', phone: '+91 11 4567 8920', yearsInBusiness: 14, employees: '1,240+', annualTurnover: '₹486 Cr', completedProjects: 38, rating: '4.7 / 5', services: ['Highway construction', 'Bridge and culvert works', 'Land development', 'Project management'], certifications: ['ISO 9001:2015', 'ISO 14001:2015', 'NHAI Class A contractor'],
+  },
+  'Kashi GeoWorks Consortium': {
+    legalName: 'Kashi GeoWorks Consortium LLP', registrationNumber: 'LLPIN: AAX-4482', headquarters: 'Varanasi, Uttar Pradesh', contact: 'bids@kashigeoworks.example', phone: '+91 542 402 1180', yearsInBusiness: 9, employees: '185+', annualTurnover: '₹72 Cr', completedProjects: 64, rating: '4.5 / 5', services: ['GIS mapping and survey', 'Drone-based verification', 'Land records digitisation', 'Environmental surveys'], certifications: ['ISO 9001:2015', 'DGCA drone authorisation', 'Geospatial services certified'],
+  },
+  'Pragati Urban Systems': {
+    legalName: 'Pragati Urban Systems Limited', registrationNumber: 'CIN: U74999MH2016PLC287401', headquarters: 'Mumbai, Maharashtra', contact: 'partnerships@pragatiurban.example', phone: '+91 22 4912 6400', yearsInBusiness: 10, employees: '620+', annualTurnover: '₹214 Cr', completedProjects: 27, rating: '4.6 / 5', services: ['Urban infrastructure', 'Utility relocation', 'Smart corridor systems', 'Construction supervision'], certifications: ['ISO 9001:2015', 'ISO 45001:2018', 'CPWD registered contractor'],
+  },
+}
+
+export const rolePermissions = {
+  nationalOfficer: ['/dashboard', '/projects', '/parcels', '/gis', '/workflow', '/compensation', '/rr', '/minister/rr', '/minister/finance', '/alerts', '/documents', '/reports'],
+  stateOfficer: ['/dashboard', '/projects', '/parcels', '/gis', '/workflow', '/compensation', '/rr', '/alerts', '/reports'],
+  districtOfficer: ['/dashboard', '/projects', '/parcels', '/gis', '/workflow', '/compensation', '/rr', '/field-verification', '/alerts', '/documents', '/reports'],
+  gramPanchayatOfficer: ['/field-verification', '/gis', '/parcels', '/documents', '/alerts'],
+  rrAdministrator: ['/rr', '/projects', '/parcels', '/documents', '/alerts', '/reports'],
+  financeOfficer: ['/compensation', '/projects', '/parcels', '/alerts', '/documents', '/reports'],
+  citizen: ['/citizen', '/citizen/parcel', '/citizen/acquisition-status', '/citizen/compensation', '/citizen/rr-benefits', '/citizen/documents', '/citizen/objections', '/citizen/grievances'],
+  companyPartner: ['/company-dashboard'],
+}
+
+export const roleNavigation = {
+  nationalOfficer: [
+    ['/dashboard', 'National Dashboard'], ['/projects', 'States & Projects'],
+    ['/alerts', 'Alerts & Escalations'], ['/reports', 'Reports & MIS'],
+  ],
+  stateOfficer: [
+    ['/dashboard', 'State Dashboard'], ['/projects', 'State Projects'], ['/parcels', 'Acquisition Cases'],
+    ['/alerts', 'Alerts'], ['/reports', 'Reports'],
+  ],
+  districtOfficer: [
+    ['/dashboard', 'District Dashboard'], ['/projects', 'My Projects'], ['/parcels', 'Acquisition Cases'],
+    ['/field-verification', 'Survey & Verification'],
+    ['/documents', 'Documents'], ['/alerts', 'Alerts'], ['/reports', 'Reports'],
+  ],
+  gramPanchayatOfficer: [
+    ['/field-verification', 'Gram Panchayat Worklist'], ['/parcels', 'Assigned Parcels'],
+    ['/field-verification', 'Field Verification'], ['/documents', 'Geo-tagged Evidence'], ['/alerts', 'Sync Status'],
+  ],
+  rrAdministrator: [
+    ['/rr', 'R&R Dashboard'], ['/parcels', 'Affected Families'], ['/documents', 'Delivery Evidence'], ['/reports', 'Reports'], ['/alerts', 'Pending Cases'],
+  ],
+  financeOfficer: [
+    ['/compensation', 'Finance Dashboard'], ['/parcels', 'Compensation Cases'], ['/alerts', 'Failed Payments'], ['/documents', 'Payment Documents'], ['/reports', 'Payment Reports'],
+  ],
+  citizen: [
+    ['/citizen', 'Overview'], ['/citizen/parcel', 'My Parcel'], ['/citizen/acquisition-status', 'Acquisition Status'], ['/citizen/compensation', 'Compensation'], ['/citizen/rr-benefits', 'R&R Benefits'], ['/citizen/documents', 'My Documents'], ['/citizen/objections', 'My Objections'], ['/citizen/grievances', 'My Grievances'],
+  ],
+  companyPartner: [
+    ['/company-dashboard', 'Opportunity Dashboard'], ['/projects', 'Government Projects'],
+  ],
+}
+
+export const roleHomeMap = {
+  nationalOfficer: '/dashboard',
+  stateOfficer: '/dashboard',
+  districtOfficer: '/dashboard',
+  gramPanchayatOfficer: '/field-verification',
+  rrAdministrator: '/rr',
+  financeOfficer: '/compensation',
+  citizen: '/citizen',
+  companyPartner: '/company-dashboard',
+}
+
+export const projectStageFlow = [
+  'Proposal',
+  'Scrutiny',
+  'Notification',
+  'Objection',
+  'Survey',
+  'Declaration',
+  'Award',
+  'Compensation',
+  'R&R',
+  'Possession',
+  'Closure',
+]
+
+export const workflowStages = [
+  { name: 'Proposal', status: 'Completed', date: '2026-08-02', role: 'Project Planning Cell', sla: '10 days', completed: true },
+  { name: 'Scrutiny', status: 'Completed', date: '2026-08-07', role: 'State Secretariat', sla: '14 days', completed: true },
+  { name: 'Notification', status: 'Completed', date: '2026-08-15', role: 'District Collector', sla: '21 days', completed: true },
+  { name: 'Objection', status: 'Pending Review', date: '2026-08-27', role: 'CALA Officer', sla: '30 days', completed: false },
+  { name: 'Survey', status: 'In Progress', date: '2026-09-04', role: 'Field Officer', sla: '18 days', completed: false },
+  { name: 'Declaration', status: 'Pending', date: '2026-09-20', role: 'State Government', sla: '45 days', completed: false },
+  { name: 'Award', status: 'Pending', date: '2026-10-08', role: 'District Officer', sla: '12 days', completed: false },
+  { name: 'Compensation', status: 'Pending', date: '2026-10-18', role: 'Treasury & Finance', sla: '7 days', completed: false },
+  { name: 'R&R', status: 'Pending', date: '2026-10-30', role: 'R&R Cell', sla: '22 days', completed: false },
+  { name: 'Possession', status: 'Pending', date: '2026-11-20', role: 'District Administration', sla: '15 days', completed: false },
+  { name: 'Closure', status: 'Pending', date: '2026-12-05', role: 'Project Closure Cell', sla: '30 days', completed: false },
+]
+
+export const projects = [
+  {
+    id: 'NHC-2026-014',
+    name: 'BHU National Highway Corridor',
+    state: 'Uttar Pradesh',
+    district: 'Varanasi',
+    villages: ['Sahupur', 'Bhadiya', 'Rasalpur', 'Maheshpur'],
+    projectType: 'National Highways',
+    statute: 'RFCTLARR Act, 2013',
+    authority: 'National Highways Authority of India',
+    totalLandRequired: '245.8 ha',
+    totalParcels: 54,
+    acquired: 31,
+    pending: 14,
+    blocked: 9,
+    progress: 58,
+    status: 'Attention',
+    stage: 'Award',
+    readiness: '92%',
+    daysRemaining: 18,
+    proposalDeadline: '2026-10-12',
+    bidOpeningDate: '2026-10-15',
+    level: 'national',
+    keyParcel: 'ULPIN-UP-7812-004',
+  },
+  {
+    id: 'RRT-2026-119',
+    name: 'Rani Tola Ring Road Project',
+    state: 'Uttar Pradesh',
+    district: 'Lucknow',
+    villages: ['Bharwara', 'Khargapur'],
+    projectType: 'Road Infrastructure',
+    statute: 'RFCTLARR Act, 2013',
+    authority: 'UP State Road Development Agency',
+    totalLandRequired: '132.4 ha',
+    totalParcels: 38,
+    acquired: 29,
+    pending: 6,
+    blocked: 3,
+    progress: 76,
+    status: 'On Track',
+    stage: 'Notification',
+    readiness: '87%',
+    daysRemaining: 41,
+    proposalDeadline: '2026-10-28',
+    bidOpeningDate: '2026-10-31',
+    level: 'state',
+    keyParcel: 'ULPIN-UP-7402-012',
+  },
+  {
+    id: 'MSR-2026-833',
+    name: 'Mirzapur Smart Rail Spur',
+    state: 'Uttar Pradesh',
+    district: 'Mirzapur',
+    villages: ['Katra', 'Aman', 'Tisar'],
+    projectType: 'Rail Corridor',
+    statute: 'RFCTLARR Act, 2013',
+    authority: 'Ministry of Railways',
+    totalLandRequired: '186.2 ha',
+    totalParcels: 61,
+    acquired: 35,
+    pending: 21,
+    blocked: 5,
+    progress: 57,
+    status: 'Delayed',
+    stage: 'Survey',
+    readiness: '71%',
+    daysRemaining: 11,
+    proposalDeadline: '2026-10-04',
+    bidOpeningDate: '2026-10-07',
+    level: 'state',
+    keyParcel: 'ULPIN-UP-4821-220',
+  },
+  {
+    id: 'SIP-2026-440',
+    name: 'Sultanpur Industrial Park',
+    state: 'Uttar Pradesh',
+    district: 'Sultanpur',
+    villages: ['Pipra', 'Dantupur'],
+    projectType: 'Industrial Zone',
+    statute: 'State Land Acquisition Rules',
+    authority: 'UP Industrial Development Authority',
+    totalLandRequired: '98.7 ha',
+    totalParcels: 28,
+    acquired: 19,
+    pending: 6,
+    blocked: 3,
+    progress: 68,
+    status: 'On Track',
+    stage: 'Compensation',
+    readiness: '83%',
+    daysRemaining: 29,
+    proposalDeadline: '2026-10-19',
+    bidOpeningDate: '2026-10-22',
+    level: 'state',
+    keyParcel: 'ULPIN-UP-4908-118',
+  },
+  {
+    id: 'VFT-2026-207',
+    name: 'Varanasi Freight Terminal Access Road',
+    state: 'Uttar Pradesh',
+    district: 'Varanasi',
+    villages: ['Lakhanpur', 'Chitaipur'],
+    projectType: 'Road Infrastructure',
+    statute: 'State Land Acquisition Rules',
+    authority: 'Varanasi District Administration',
+    totalLandRequired: '42.6 ha',
+    totalParcels: 19,
+    acquired: 6,
+    pending: 13,
+    blocked: 2,
+    progress: 32,
+    status: 'New',
+    stage: 'Proposal',
+    readiness: '64%',
+    daysRemaining: 72,
+    proposalDeadline: '2026-11-08',
+    bidOpeningDate: '2026-11-11',
+    level: 'district',
+    keyParcel: 'ULPIN-UP-7812-011',
+  },
+]
+
+export const parcels = [
+  {
+    id: 'ULPIN-UP-7812-004',
+    ulpin: 'ULPIN-UP-7812-004',
+    projectId: 'NHC-2026-014',
+    surveyNo: '12/2A',
+    village: 'Sahupur',
+    district: 'Varanasi',
+    state: 'Uttar Pradesh',
+    area: '1.44 ha',
+    landType: 'Agricultural',
+    currentStage: 'Award',
+    status: 'Attention',
+    paymentStatus: 'Pending',
+    rrStatus: 'Pending',
+    compensation: { assessed: 9800000, awarded: 7600000, paid: 3200000, pending: 4400000 },
+    affectedFamily: 4,
+    displacedFamily: 2,
+    blocker: 'Pending compensation verification',
+    daysBlocked: 12,
+    lastUpdated: '2026-09-12',
+    mapLocation: { lat: 25.3174, lng: 82.9738 },
+    timeline: [
+      { date: '2026-08-02', title: 'Proposal created' },
+      { date: '2026-08-07', title: 'Scrutiny completed' },
+      { date: '2026-08-15', title: 'Notification issued' },
+      { date: '2026-08-27', title: 'Objection received' },
+      { date: '2026-09-04', title: 'Survey completed' },
+      { date: '2026-09-12', title: 'Award passed' },
+    ],
+    documentTypes: ['Notification', 'Survey report', 'Award document', 'Payment proof'],
+    review: 'Discrepancy Found',
+    occupantInfo: 'Three cultivators and one tenant occupant',
+    gps: 'Stable',
+    boundary: 'Verified',
+    structures: 2,
+    trees: 18,
+    wells: 1,
+    crops: 'Rice and wheat',
+    relatedFamilyRecords: ['RR-2041', 'RR-2042'],
+    acquisition: {
+      notification: 'Completed',
+      objection: 'Pending hearing',
+      survey: 'Completed',
+      declaration: 'Awaiting approval',
+      award: 'In final review',
+      possession: 'Not started',
+    },
+  },
+  {
+    id: 'ULPIN-UP-7812-008',
+    ulpin: 'ULPIN-UP-7812-008',
+    projectId: 'NHC-2026-014',
+    surveyNo: '14/3B',
+    village: 'Bhadiya',
+    district: 'Varanasi',
+    state: 'Uttar Pradesh',
+    area: '1.28 ha',
+    landType: 'Agricultural',
+    currentStage: 'Payment',
+    status: 'In Progress',
+    paymentStatus: 'Deposited',
+    rrStatus: 'Delivered',
+    compensation: { assessed: 8450000, awarded: 8450000, paid: 8450000, pending: 0 },
+    affectedFamily: 3,
+    displacedFamily: 1,
+    blocker: 'No blocker',
+    daysBlocked: 0,
+    lastUpdated: '2026-09-18',
+    mapLocation: { lat: 25.3261, lng: 82.9612 },
+    timeline: [
+      { date: '2026-08-05', title: 'Proposal created' },
+      { date: '2026-08-12', title: 'Notification issued' },
+      { date: '2026-08-22', title: 'Survey completed' },
+      { date: '2026-09-02', title: 'Award passed' },
+      { date: '2026-09-18', title: 'Payment deposited' },
+    ],
+    documentTypes: ['Notification', 'Award document', 'Payment proof'],
+    review: 'Verified',
+    occupantInfo: 'Single owner family',
+    gps: 'Stable',
+    boundary: 'Verified',
+    structures: 0,
+    trees: 7,
+    wells: 0,
+    crops: 'Mustard',
+    relatedFamilyRecords: ['RR-2056'],
+    acquisition: {
+      notification: 'Completed',
+      objection: 'Resolved',
+      survey: 'Completed',
+      declaration: 'Approved',
+      award: 'Completed',
+      possession: 'Pending',
+    },
+  },
+  {
+    id: 'ULPIN-UP-7812-011',
+    ulpin: 'ULPIN-UP-7812-011',
+    projectId: 'NHC-2026-014',
+    surveyNo: '20/1',
+    village: 'Rasalpur',
+    district: 'Varanasi',
+    state: 'Uttar Pradesh',
+    area: '2.16 ha',
+    landType: 'Mixed use',
+    currentStage: 'Objection',
+    status: 'Blocked',
+    paymentStatus: 'Failed',
+    rrStatus: 'Pending',
+    compensation: { assessed: 12150000, awarded: 12150000, paid: 2600000, pending: 9550000 },
+    affectedFamily: 6,
+    displacedFamily: 3,
+    blocker: 'Objection hearing pending',
+    daysBlocked: 26,
+    lastUpdated: '2026-09-10',
+    mapLocation: { lat: 25.3309, lng: 82.9891 },
+    timeline: [
+      { date: '2026-08-04', title: 'Proposal created' },
+      { date: '2026-08-14', title: 'Notification issued' },
+      { date: '2026-08-29', title: 'Objection filed' },
+      { date: '2026-09-02', title: 'Hearing awaited' },
+    ],
+    documentTypes: ['Notification', 'Objection record', 'Survey report'],
+    review: 'Requires Review',
+    occupantInfo: 'Multiple claimants',
+    gps: 'Weak',
+    boundary: 'Discrepancy',
+    structures: 4,
+    trees: 31,
+    wells: 2,
+    crops: 'Vegetables',
+    relatedFamilyRecords: ['RR-2061', 'RR-2062'],
+    acquisition: {
+      notification: 'Completed',
+      objection: 'Hearing due',
+      survey: 'Completed',
+      declaration: 'Blocked',
+      award: 'Pending',
+      possession: 'Blocked',
+    },
+  },
+  {
+    id: 'ULPIN-UP-7402-012',
+    ulpin: 'ULPIN-UP-7402-012',
+    projectId: 'RRT-2026-119',
+    surveyNo: '7/4A',
+    village: 'Bharwara',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    area: '1.12 ha',
+    landType: 'Residential',
+    currentStage: 'Notification',
+    status: 'On Track',
+    paymentStatus: 'Pending',
+    rrStatus: 'Eligible',
+    compensation: { assessed: 7600000, awarded: 7600000, paid: 1600000, pending: 6000000 },
+    affectedFamily: 2,
+    displacedFamily: 1,
+    blocker: 'Awaiting district clearance',
+    daysBlocked: 5,
+    lastUpdated: '2026-09-08',
+    mapLocation: { lat: 26.845, lng: 80.947 },
+    timeline: [
+      { date: '2026-08-10', title: 'Proposal created' },
+      { date: '2026-08-18', title: 'Scrutiny completed' },
+      { date: '2026-08-29', title: 'Notification issued' },
+    ],
+    documentTypes: ['Notification', 'Survey report'],
+    review: 'Verified',
+    occupantInfo: 'Residential plots with one shop',
+    gps: 'Stable',
+    boundary: 'Verified',
+    structures: 3,
+    trees: 9,
+    wells: 0,
+    crops: 'None',
+    relatedFamilyRecords: ['RR-3018'],
+    acquisition: {
+      notification: 'Current',
+      objection: 'Awaiting window',
+      survey: 'Completed',
+      declaration: 'Pending',
+      award: 'Pending',
+      possession: 'Pending',
+    },
+  },
+  {
+    id: 'ULPIN-UP-4821-220',
+    ulpin: 'ULPIN-UP-4821-220',
+    projectId: 'MSR-2026-833',
+    surveyNo: '52/1',
+    village: 'Katra',
+    district: 'Mirzapur',
+    state: 'Uttar Pradesh',
+    area: '1.96 ha',
+    landType: 'Agricultural',
+    currentStage: 'Survey',
+    status: 'Delayed',
+    paymentStatus: 'Pending',
+    rrStatus: 'Pending',
+    compensation: { assessed: 11000000, awarded: 9900000, paid: 0, pending: 9900000 },
+    affectedFamily: 5,
+    displacedFamily: 2,
+    blocker: 'Survey verification incomplete',
+    daysBlocked: 21,
+    lastUpdated: '2026-09-05',
+    mapLocation: { lat: 25.1371, lng: 82.5655 },
+    timeline: [
+      { date: '2026-07-30', title: 'Proposal created' },
+      { date: '2026-08-10', title: 'Notification issued' },
+      { date: '2026-08-26', title: 'Survey in progress' },
+    ],
+    documentTypes: ['Notification', 'Survey report'],
+    review: 'Discrepancy Found',
+    occupantInfo: 'Two plot owners and family structures',
+    gps: 'Stable',
+    boundary: 'Pending',
+    structures: 2,
+    trees: 14,
+    wells: 1,
+    crops: 'Barley',
+    relatedFamilyRecords: ['RR-4101'],
+    acquisition: {
+      notification: 'Completed',
+      objection: 'Pending',
+      survey: 'In progress',
+      declaration: 'Pending',
+      award: 'Pending',
+      possession: 'Pending',
+    },
+  },
+  {
+    id: 'ULPIN-UP-4908-118',
+    ulpin: 'ULPIN-UP-4908-118',
+    projectId: 'SIP-2026-440',
+    surveyNo: '18/6',
+    village: 'Dantupur',
+    district: 'Sultanpur',
+    state: 'Uttar Pradesh',
+    area: '0.88 ha',
+    landType: 'Commercial',
+    currentStage: 'Compensation',
+    status: 'On Track',
+    paymentStatus: 'Paid',
+    rrStatus: 'Delivered',
+    compensation: { assessed: 6800000, awarded: 6800000, paid: 6800000, pending: 0 },
+    affectedFamily: 2,
+    displacedFamily: 1,
+    blocker: 'No blocker',
+    daysBlocked: 0,
+    lastUpdated: '2026-09-20',
+    mapLocation: { lat: 26.264, lng: 82.075 },
+    timeline: [
+      { date: '2026-08-08', title: 'Proposal created' },
+      { date: '2026-08-18', title: 'Notification issued' },
+      { date: '2026-08-26', title: 'Survey completed' },
+      { date: '2026-09-02', title: 'Award passed' },
+      { date: '2026-09-20', title: 'Compensation paid' },
+    ],
+    documentTypes: ['Award document', 'Payment proof'],
+    review: 'Verified',
+    occupantInfo: 'Commercial owner',
+    gps: 'Stable',
+    boundary: 'Verified',
+    structures: 1,
+    trees: 6,
+    wells: 0,
+    crops: 'None',
+    relatedFamilyRecords: ['RR-5102'],
+    acquisition: {
+      notification: 'Completed',
+      objection: 'Resolved',
+      survey: 'Completed',
+      declaration: 'Approved',
+      award: 'Completed',
+      possession: 'Pending',
+    },
+  },
+]
+
+export const alerts = [
+  { id: 'ALT-201', severity: 'Critical', title: 'Statutory deadline approaching', project: 'BHU National Highway Corridor', parcel: 'ULPIN-UP-7812-004', officer: 'District CALA Officer', deadline: '2026-09-30', status: 'Critical', role: 'nationalOfficer' },
+  { id: 'ALT-202', severity: 'Critical', title: 'Payment failed for award disbursement', project: 'BHU National Highway Corridor', parcel: 'ULPIN-UP-7812-011', officer: 'Treasury & Finance', deadline: '2026-09-25', status: 'Critical', role: 'financeOfficer' },
+  { id: 'ALT-203', severity: 'Warning', title: 'R&R delivery delayed', project: 'Mirzapur Smart Rail Spur', parcel: 'ULPIN-UP-4821-220', officer: 'R&R Cell', deadline: '2026-10-03', status: 'Warning', role: 'rrAdministrator' },
+  { id: 'ALT-204', severity: 'Warning', title: 'Objection hearing pending', project: 'BHU National Highway Corridor', parcel: 'ULPIN-UP-7812-011', officer: 'CALA Officer', deadline: '2026-09-26', status: 'Warning', role: 'districtOfficer' },
+  { id: 'ALT-205', severity: 'Warning', title: 'Survey verification incomplete', project: 'Mirzapur Smart Rail Spur', parcel: 'ULPIN-UP-4821-220', officer: 'Gram Panchayat Officer', deadline: '2026-09-27', status: 'Warning', role: 'gramPanchayatOfficer' },
+]
+
+export const documents = [
+  { id: 'DOC-101', name: 'Notification Order - Sahupur', type: 'Notification', parcel: 'ULPIN-UP-7812-004', uploadedBy: 'District Office', date: '2026-08-15', version: 'V3', status: 'Verified' },
+  { id: 'DOC-102', name: 'Survey Field Report - Rasalpur', type: 'Survey Report', parcel: 'ULPIN-UP-7812-011', uploadedBy: 'Field Team', date: '2026-09-02', version: 'V2', status: 'Pending Review' },
+  { id: 'DOC-103', name: 'Award Order - Bhadiya', type: 'Award Order', parcel: 'ULPIN-UP-7812-008', uploadedBy: 'CALA Office', date: '2026-09-02', version: 'V1', status: 'Approved' },
+  { id: 'DOC-104', name: 'Payment Proof - Dantupur', type: 'Payment Document', parcel: 'ULPIN-UP-4908-118', uploadedBy: 'Finance Cell', date: '2026-09-20', version: 'V1', status: 'Verified' },
+  { id: 'DOC-105', name: 'R&R Assistance Register', type: 'R&R Document', parcel: 'ULPIN-UP-7812-004', uploadedBy: 'R&R Cell', date: '2026-09-12', version: 'V4', status: 'Draft' },
+]
+
+export const familyRecords = [
+  { id: 'RR-2041', family: 'Family A', parcel: 'ULPIN-UP-7812-004', village: 'Sahupur', type: 'Affected', entitlement: 'Housing assistance', delivered: '₹8.4L', pending: '₹0', status: 'Delivered' },
+  { id: 'RR-2042', family: 'Family B', parcel: 'ULPIN-UP-7812-004', village: 'Sahupur', type: 'Displaced', entitlement: 'Resettlement plot', delivered: '₹0', pending: '₹14.2L', status: 'Pending' },
+  { id: 'RR-2056', family: 'Family C', parcel: 'ULPIN-UP-7812-008', village: 'Bhadiya', type: 'Affected', entitlement: 'Livelihood support', delivered: '₹6.8L', pending: '₹0', status: 'Delivered' },
+  { id: 'RR-2061', family: 'Family D', parcel: 'ULPIN-UP-7812-011', village: 'Rasalpur', type: 'Displaced', entitlement: 'House construction aid', delivered: '₹0', pending: '₹18.5L', status: 'Pending' },
+  { id: 'RR-3018', family: 'Family E', parcel: 'ULPIN-UP-7402-012', village: 'Bharwara', type: 'Affected', entitlement: 'Transition support', delivered: '₹3.1L', pending: '₹1.3L', status: 'In Progress' },
+]
+
+export const activityFeed = [
+  'Parcel ULPIN-UP-7812-004 moved to Award stage',
+  'Payment status updated for parcel ULPIN-UP-7812-011',
+  'Field verification submitted for Sahupur village',
+  'Objection hearing scheduled for Rasalpur parcel cluster',
+  'Project BHU National Highway Corridor flagged for SLA review',
+]
+
+export const paymentDistribution = [
+  { name: 'Paid', value: 52 },
+  { name: 'Pending', value: 31 },
+  { name: 'Failed', value: 11 },
+  { name: 'Returned', value: 6 },
+]
+
+export const dashboardStats = {
+  totalProjects: 24,
+  totalParcels: 12480,
+  acquisitionCompleted: 8920,
+  compensationPending: 1240,
+  rrPending: 680,
+  blockedParcels: 315,
+}
+
+export const stateComparison = [
+  { state: 'Uttar Pradesh', projects: 8, progress: 72 },
+  { state: 'Madhya Pradesh', projects: 6, progress: 64 },
+  { state: 'Maharashtra', projects: 5, progress: 60 },
+  { state: 'Odisha', projects: 4, progress: 58 },
+  { state: 'Rajasthan', projects: 4, progress: 49 },
+]
+
+export const stageDuration = [
+  { name: 'Scrutiny', days: 14 },
+  { name: 'Notification', days: 23 },
+  { name: 'Objection', days: 31 },
+  { name: 'Survey', days: 22 },
+  { name: 'Award', days: 17 },
+  { name: 'Payment', days: 27 },
+  { name: 'R&R', days: 35 },
+]
+
+export const corridorPolygons = [
+  { id: 'ULPIN-UP-7812-004', key: 'ULPIN-UP-7812-004', status: 'Blocked', label: 'Sahupur', lat: 25.3174, lng: 82.9738 },
+  { id: 'ULPIN-UP-7812-008', key: 'ULPIN-UP-7812-008', status: 'Completed', label: 'Bhadiya', lat: 25.3261, lng: 82.9612 },
+  { id: 'ULPIN-UP-7812-011', key: 'ULPIN-UP-7812-011', status: 'Objection', label: 'Rasalpur', lat: 25.3309, lng: 82.9891 },
+  { id: 'ULPIN-UP-7402-012', key: 'ULPIN-UP-7402-012', status: 'Awarded', label: 'Bharwara', lat: 26.845, lng: 80.947 },
+  { id: 'ULPIN-UP-4821-220', key: 'ULPIN-UP-4821-220', status: 'Pending', label: 'Katra', lat: 25.1371, lng: 82.5655 },
+  { id: 'ULPIN-UP-4908-118', key: 'ULPIN-UP-4908-118', status: 'Paid', label: 'Dantupur', lat: 26.264, lng: 82.075 },
+]
+
+export const defaultCitizenParcelId = 'ULPIN-UP-7812-004'
+
+export const citizenPortalData = {
+  objections: [
+    { id: 'OBJ-2026-0041', project: 'BHU National Highway Corridor', submittedDate: '2026-08-27', status: 'Under review', response: 'Hearing scheduled' },
+  ],
+  grievances: [
+    { id: 'GRV-2026-0019', subject: 'Correction requested in award record', submittedDate: '2026-09-12', status: 'In progress', lastUpdate: '2026-09-18' },
+  ],
+  documents: [
+    { id: 'CIT-DOC-001', name: 'Acquisition Notice - Sahupur', type: 'Acquisition Notice', date: '2026-08-15', status: 'Available' },
+    { id: 'CIT-DOC-002', name: 'Survey Report - Sahupur', type: 'Survey Report', date: '2026-09-04', status: 'Available' },
+    { id: 'CIT-DOC-003', name: 'Award Document - Sahupur', type: 'Award Document', date: '2026-09-12', status: 'Available' },
+    { id: 'CIT-DOC-004', name: 'Compensation Assessment', type: 'Compensation Document', date: '2026-09-15', status: 'Available' },
+    { id: 'CIT-DOC-005', name: 'R&R Entitlement Record', type: 'R&R Document', date: '2026-09-18', status: 'Available' },
+  ],
+  notifications: [
+    'Acquisition notice issued for your parcel',
+    'Compensation assessment updated',
+    'Objection response deadline: 24 Nov 2026',
+  ],
+}
+
+export function getVisibleProjects(role, profile) {
+  if (role === 'citizen') return projects.filter((project) => project.keyParcel === profile?.parcelIds?.[0] || project.keyParcel === defaultCitizenParcelId)
+  if (role === 'gramPanchayatOfficer') return projects.filter((project) => profile?.assignedParcelIds?.some((id) => project.keyParcel === id))
+  if (['districtOfficer', 'rrAdministrator'].includes(role)) return projects.filter((project) => project.district === profile?.jurisdiction)
+  if (['stateOfficer', 'financeOfficer'].includes(role)) return projects.filter((project) => project.state === profile?.jurisdiction)
+  return projects
+}
+
+export function getVisibleParcels(role, profile) {
+  if (role === 'citizen') return parcels.filter((parcel) => profile?.parcelIds?.includes(parcel.id))
+  if (role === 'gramPanchayatOfficer') return parcels.filter((parcel) => profile?.assignedParcelIds?.includes(parcel.id))
+  if (['districtOfficer', 'rrAdministrator'].includes(role)) return parcels.filter((parcel) => parcel.district === profile?.jurisdiction)
+  if (['stateOfficer', 'financeOfficer'].includes(role)) return parcels.filter((parcel) => parcel.state === profile?.jurisdiction)
+  return parcels
+}
+
+export function getVisibleAlerts(role, profile) {
+  if (role === 'citizen') return [{ id: 'CIT-001', title: 'Your compensation payment is under processing.', severity: 'Info', project: 'Your parcel', parcel: profile?.parcelIds?.[0], officer: 'BHU-SETU', deadline: 'Current', status: 'Open' }]
+  if (role === 'nationalOfficer') return alerts
+  if (role === 'stateOfficer') return alerts.filter((alert) => alert.role !== 'nationalOfficer')
+  if (role === 'gramPanchayatOfficer') return alerts.filter((alert) => alert.role === 'gramPanchayatOfficer')
+  return alerts.filter((alert) => alert.role === role || (role === 'districtOfficer' && alert.role === 'fieldOfficer'))
+}
+
+export function getVisibleDocuments(role, profile) {
+  if (role === 'citizen') return documents.filter((document) => profile?.parcelIds?.includes(document.parcel))
+  if (role === 'fieldOfficer') return documents.filter((document) => profile?.assignedParcelIds?.includes(document.parcel))
+  if (role === 'financeOfficer') return documents.filter((document) => document.type.toLowerCase().includes('payment') || document.type.toLowerCase().includes('award'))
+  if (role === 'rrAdministrator') return documents.filter((document) => document.type.toLowerCase().includes('r&r') || document.type.toLowerCase().includes('entitlement'))
+  return documents
+}
