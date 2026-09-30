@@ -30,8 +30,8 @@ export default function GISMapPage({ role = 'nationalOfficer' }) {
         </div>
         <MapContainer center={[25.7, 82.7]} zoom={9} scrollWheelZoom className="leaflet-map">
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
           {visiblePolygons.map((parcel) => (
             <Circle

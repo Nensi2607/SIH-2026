@@ -1,5 +1,4 @@
 import { useParams } from 'react-router-dom'
-import { Link } from 'react-router-dom'
 import { Circle, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getVisibleProjects, projectStageFlow, userProfiles } from '../data/mockData'
@@ -15,10 +14,10 @@ function getProjectCoordinates(project) {
   return projectCoordinates[project.district] || [26.8467, 80.9462]
 }
 
-export default function ProjectDetailsPage({ role = 'nationalOfficer' }) {
+export default function ProjectDetailsPage({ role = 'nationalOfficer', projectRecords = [] }) {
   const { projectId } = useParams()
   const profile = userProfiles.find((item) => item.role === role)
-  const project = getVisibleProjects(role, profile).find((item) => item.id === projectId)
+  const project = getVisibleProjects(role, profile, projectRecords.length ? projectRecords : undefined).find((item) => item.id === projectId)
 
   if (!project) return <div className="panel-card"><h2>Project access restricted</h2><p>This project is outside your assigned jurisdiction.</p></div>
 
@@ -26,22 +25,10 @@ export default function ProjectDetailsPage({ role = 'nationalOfficer' }) {
     <div className="stack-block">
       <div className="section-header two-line">
         <div>
-          <div className="eyebrow">Project Overview</div>
           <h2>{project.name}</h2>
         </div>
         <span className="pill success">{project.status}</span>
       </div>
-
-      <nav className="project-workspace-nav" aria-label="Project operations">
-        <div className="project-workspace-label"><div className="eyebrow">Project operations</div><strong>Project-specific dashboards</strong></div>
-        <div className="project-workspace-links">
-          <Link className="secondary-btn" to={`/projects/${project.id}/workflow`}>Workflow Monitoring</Link>
-          <Link className="secondary-btn" to={`/projects/${project.id}/rr`}>R&R Overview</Link>
-          <Link className="secondary-btn" to={`/projects/${project.id}/compensation`}>Compensation Overview</Link>
-          <Link className="secondary-btn" to={`/projects/${project.id}/finance`}>Finance Overview</Link>
-        </div>
-        <span className="pill neutral">Scoped to {project.id}</span>
-      </nav>
 
       <div className="panel-card">
         <div className="project-meta-grid">
@@ -55,6 +42,7 @@ export default function ProjectDetailsPage({ role = 'nationalOfficer' }) {
           <div><label>Total Parcels</label><strong>{project.totalParcels}</strong></div>
           <div><label>Acquisition Progress</label><strong>{project.progress}%</strong></div>
           <div><label>Project Readiness</label><strong>{project.readiness}</strong></div>
+          {project.projectCreatedBy && <div><label>Project created by</label><strong>{project.projectCreatedBy.name} · {project.projectCreatedBy.designation}</strong></div>}
         </div>
       </div>
 
@@ -74,7 +62,7 @@ export default function ProjectDetailsPage({ role = 'nationalOfficer' }) {
       <div className="panel-card project-map-card">
         <div className="section-header"><div><div className="eyebrow">Project boundary and parcel context</div><h3>GIS Acquisition Map</h3></div><span className="pill neutral">{project.district}, {project.state}</span></div>
         <MapContainer center={getProjectCoordinates(project)} zoom={11} scrollWheelZoom className="project-detail-map">
-          <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <TileLayer attribution="&copy; OpenStreetMap contributors &copy; CARTO" url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
           <Circle center={getProjectCoordinates(project)} radius={Math.max(1800, project.totalParcels * 80)} pathOptions={{ color: '#0f766e', fillColor: '#14b8a6', fillOpacity: 0.22 }}><Popup><strong>{project.name}</strong><br />{project.totalLandRequired} planned area<br />{project.totalParcels} project parcels</Popup></Circle>
           {project.villages.map((village, index) => <Marker key={village} position={[getProjectCoordinates(project)[0] + (index - 1) * 0.012, getProjectCoordinates(project)[1] + (index % 2 ? 0.014 : -0.01)]}><Popup><strong>{village}</strong><br />Project village</Popup></Marker>)}
         </MapContainer>

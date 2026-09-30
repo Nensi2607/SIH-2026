@@ -8,29 +8,35 @@ const statuses = ['All', ...new Set(projects.map((project) => project.status))]
 const projectTypes = ['All', ...new Set(projects.map((project) => project.projectType))]
 const stages = ['All', ...new Set(projects.map((project) => project.stage))]
 
-export default function ProjectsPage({ role = 'nationalOfficer' }) {
+export default function ProjectsPage({ role = 'nationalOfficer', projectRecords = projects }) {
   const [stateFilter, setStateFilter] = useState('All')
   const [districtFilter, setDistrictFilter] = useState('All')
   const [typeFilter, setTypeFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
   const [stageFilter, setStageFilter] = useState('All')
+  const [searchTerm, setSearchTerm] = useState('')
 
   const profile = userProfiles.find((item) => item.role === role)
-  const scopedProjects = getVisibleProjects(role, profile)
+  const scopedProjects = getVisibleProjects(role, profile, projectRecords)
 
   const filteredProjects = useMemo(() => scopedProjects.filter((project) => {
-    return (
+    const searchMatch = !searchTerm || `${project.name} ${project.id} ${project.district} ${project.state}`.toLowerCase().includes(searchTerm.toLowerCase())
+    return searchMatch && (
       (stateFilter === 'All' || project.state === stateFilter) &&
       (districtFilter === 'All' || project.district === districtFilter) &&
       (typeFilter === 'All' || project.projectType === typeFilter) &&
       (statusFilter === 'All' || project.status === statusFilter) &&
       (stageFilter === 'All' || project.stage === stageFilter)
     )
-  }), [stateFilter, districtFilter, typeFilter, statusFilter, stageFilter, scopedProjects])
+  }), [searchTerm, stateFilter, districtFilter, typeFilter, statusFilter, stageFilter, scopedProjects])
 
   return (
     <div className="stack-block">
-      <div className="section-header"><h2>Project Portfolio</h2><span className="pill neutral">{filteredProjects.length} projects</span></div>
+      <div className="section-header"><div><div className="eyebrow">Project portfolio</div><h2>Projects</h2></div><span className="pill neutral">{filteredProjects.length} projects</span></div>
+
+      <div className="project-search-row">
+        <input className="project-search-input" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search project name, project ID, district or state" />
+      </div>
 
       <div className="filter-grid">
         <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}><option>All</option>{states.slice(1).map((state) => <option key={state}>{state}</option>)}</select>

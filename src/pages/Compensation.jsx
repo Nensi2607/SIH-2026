@@ -21,7 +21,22 @@ export default function CompensationPage({ projectId }) {
         <div className="kpi-card"><div className="kpi-head"><span className="kpi-label">Pending</span></div><strong>₹ 12.7 Cr</strong></div>
       </div>
 
-      <div className="content-grid two-up">
+      <div className="content-grid two-up compensation-detail-grid">
+        <div className="panel-card">
+          <div className="section-header"><h3>Payment Distribution</h3></div>
+          <div className="chart-wrap small">
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={paymentDistribution}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         <div className="panel-card table-panel">
           <div className="section-header"><h3>Payment Table</h3></div>
           <table>
@@ -46,21 +61,6 @@ export default function CompensationPage({ projectId }) {
               ))}
             </tbody>
           </table>
-        </div>
-
-        <div className="panel-card">
-          <div className="section-header"><h3>Payment Distribution</h3></div>
-          <div className="chart-wrap small">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={paymentDistribution}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
         </div>
       </div>
     </div>

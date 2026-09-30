@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowLeftRight,
   Bell,
   Building2,
   Briefcase,
+  FilePlus2,
   FileText,
   FolderKanban,
   Gauge,
@@ -21,10 +22,9 @@ import {
   X,
 } from 'lucide-react'
 import './App.css'
-import { citizenPortalData, getVisibleParcels, getVisibleProjects, roleHomeMap, roleNavigation, roleOptions, rolePermissions, userProfiles } from './data/mockData'
+import { citizenPortalData, getVisibleAlerts, getVisibleParcels, getVisibleProjects, lrbProjects, projects, roleHomeMap, roleNavigation, roleOptions, rolePermissions, userProfiles } from './data/mockData'
 import LoginPage from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import { SpecialistDashboard } from './pages/Dashboard'
+import Dashboard from './pages/LandAcquisitionDashboard'
 import ProjectsPage from './pages/Projects'
 import ProjectDetailsPage from './pages/ProjectDetails'
 import ParcelListPage from './pages/Parcels'
@@ -38,12 +38,10 @@ import AlertsPage from './pages/Alerts'
 import DocumentsPage from './pages/Documents'
 import ReportsPage from './pages/Reports'
 import CitizenPortalPage from './pages/CitizenPortal'
-import CompanyDashboardPage from './pages/CompanyDashboard'
-import BiddingPage from './pages/Bidding'
-import CompanyBiddingPage from './pages/CompanyBidding'
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Project Registration', path: '/project-registration', icon: FilePlus2 },
   { name: 'Projects', path: '/projects', icon: FolderKanban },
   { name: 'Parcels', path: '/parcels', icon: FileText },
   { name: 'GIS Map', path: '/gis', icon: Map },
@@ -55,15 +53,11 @@ const navItems = [
   { name: 'Documents', path: '/documents', icon: Briefcase },
   { name: 'Reports', path: '/reports', icon: Gauge },
   { name: 'Citizen Portal', path: '/citizen', icon: MessageSquareWarning },
-  { name: 'Opportunity Dashboard', path: '/company-dashboard', icon: Building2 },
 ]
 
-function AppLayout({ role, setRole, setIsLoggedIn }) {
+function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRecords }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [proposalSubmissions, setProposalSubmissions] = useState([])
-  const [bidSubmissions, setBidSubmissions] = useState([])
-  const [activeBiddingProjectIds, setActiveBiddingProjectIds] = useState([])
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const navigate = useNavigate()
@@ -79,19 +73,19 @@ function AppLayout({ role, setRole, setIsLoggedIn }) {
     key: `${path}-${index}`,
   }))
   const searchValue = searchTerm.trim().toLowerCase()
-  const searchProjects = role === 'citizen' ? [] : getVisibleProjects(role, profile).filter((project) => `${project.name} ${project.id}`.toLowerCase().includes(searchValue)).slice(0, 4)
+  const searchProjects = role === 'citizen' ? [] : getVisibleProjects(role, profile, projectRecords).filter((project) => `${project.name} ${project.id}`.toLowerCase().includes(searchValue)).slice(0, 4)
   const searchParcels = getVisibleParcels(role, profile).filter((parcel) => `${parcel.ulpin} ${parcel.surveyNo} ${parcel.village}`.toLowerCase().includes(searchValue)).slice(0, 4)
+  const notifications = getVisibleAlerts(role, profile).slice(0, 5)
 
   const routeMap = {
     '/dashboard': 'Dashboard',
+    '/project-registration': 'Project Registration',
     '/projects': 'Projects',
     '/parcels': 'Parcels',
     '/gis': 'GIS Map',
     '/workflow': 'Workflow',
     '/compensation': 'Compensation & Payment',
     '/rr': 'R&R',
-    '/minister/rr': 'R&R Minister',
-    '/minister/finance': 'Finance Officer',
     '/field-verification': 'Field Verification',
     '/alerts': 'Alerts',
     '/documents': 'Documents',
@@ -104,17 +98,20 @@ function AppLayout({ role, setRole, setIsLoggedIn }) {
     '/citizen/documents': 'My Documents',
     '/citizen/objections': 'My Objections',
     '/citizen/grievances': 'My Grievances',
-    '/company-dashboard': 'Opportunity Dashboard',
   }
 
   const pageTitle =
     currentPage.startsWith('/projects/')
-      ? 'Projects'
+      ? currentPage.endsWith('/workflow') ? 'Workflow monitoring' : currentPage.endsWith('/compensation') ? 'Compensation & payment' : currentPage.endsWith('/rr') ? 'R&R' : 'Projects'
       : currentPage.startsWith('/parcels/')
         ? 'Parcels'
         : currentPage.startsWith('/citizen/public-projects/')
           ? 'Public Project'
         : routeMap[currentPage] || 'Dashboard'
+
+  const showBackButton = currentPage.startsWith('/projects/') || currentPage.startsWith('/parcels/') || currentPage.startsWith('/citizen/')
+  const projectPath = currentPage.match(/^\/projects\/([^/]+)(?:\/(.*))?$/)
+  const projectId = projectPath?.[1]
 
   const handleNav = (path) => {
     navigate(path)
@@ -152,7 +149,6 @@ function AppLayout({ role, setRole, setIsLoggedIn }) {
             <span>{profile.title}</span>
           </div>
           <label className="role-switcher">Switch Portal Role<select value={role} onChange={(event) => { setRole(event.target.value); navigate(roleHomeMap[event.target.value]) }}>{roleOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
-          <button className="text-button" onClick={() => navigate('/dashboard')}>Settings</button>
           <button className="text-button danger" onClick={() => { setIsLoggedIn(false); setRole('nationalOfficer'); navigate('/') }}>Logout / Change Role</button>
         </div>}
       </aside>
@@ -163,6 +159,9 @@ function AppLayout({ role, setRole, setIsLoggedIn }) {
             <button className="icon-button mobile-only" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
               <Menu size={17} />
             </button>
+            {showBackButton && (
+              <button className="secondary-btn small" type="button" onClick={() => navigate(-1)} aria-label="Go back">← Back</button>
+            )}
             <div>
               <div className="eyebrow">BHU-SETU</div>
               <h1>{pageTitle}</h1>
@@ -179,7 +178,7 @@ function AppLayout({ role, setRole, setIsLoggedIn }) {
               <Bell size={16} />
               <span className="badge-dot" />
             </button>
-            {role === 'citizen' && notificationsOpen && <div className="notification-panel"><strong>Notifications</strong>{citizenPortalData.notifications.map((notification) => <span key={notification}>• {notification}</span>)}</div>}
+            {notificationsOpen && <div className="notification-panel"><strong>Notifications & deadlines</strong>{role === 'citizen' ? citizenPortalData.notifications.map((notification) => <span key={notification}>• {notification}</span>) : notifications.map((notification) => <span key={notification.id}>• {notification.title} · due {notification.deadline}</span>)}{!notifications.length && role !== 'citizen' && <span>No current acquisition alerts.</span>}</div>}
             <div className={role === 'citizen' ? 'profile-menu-wrap' : undefined}>
               <button className="user-chip" type="button" onClick={() => role === 'citizen' && setProfileMenuOpen((current) => !current)}>
                 <div className="avatar">{profile.name.slice(0, 2).toUpperCase()}</div>
@@ -194,28 +193,35 @@ function AppLayout({ role, setRole, setIsLoggedIn }) {
         </header>
 
         <main className="page-content">
+          {projectId && <nav className="project-workspace-nav" aria-label="Project navigation">
+            <div className="project-workspace-links">
+              {[
+                [`/projects/${projectId}`, 'Overview'],
+                [`/projects/${projectId}/workflow`, 'Workflow monitoring'],
+                [`/projects/${projectId}/compensation`, 'Compensation & payment'],
+                [`/projects/${projectId}/rr`, 'R&R'],
+              ].map(([path, label]) => <Link key={path} className={currentPage === path ? 'secondary-btn active' : 'secondary-btn'} to={path}>{label}</Link>)}
+            </div>
+            <Link className="pill neutral" to="/projects">All projects</Link>
+          </nav>}
           <Routes>
-            <Route path="/dashboard" element={<RoleRoute role={role} path="/dashboard"><Dashboard role={role} proposalSubmissions={proposalSubmissions} bidSubmissions={bidSubmissions} activeBiddingProjectIds={activeBiddingProjectIds} onStartBidding={(projectId) => setActiveBiddingProjectIds((current) => current.includes(projectId) ? current : [...current, projectId])} /></RoleRoute>} />
-            <Route path="/projects" element={<RoleRoute role={role} path="/projects"><ProjectsPage role={role} /></RoleRoute>} />
-            <Route path="/projects/:projectId" element={<RoleRoute role={role} path="/projects"><ProjectDetailsPage role={role} /></RoleRoute>} />
+            <Route path="/dashboard" element={<RoleRoute role={role} path="/dashboard"><Dashboard role={role} projectRecords={projectRecords} onProjectCreated={(project) => setProjectRecords((current) => [project, ...current])} /></RoleRoute>} />
+            <Route path="/project-registration" element={<RoleRoute role={role} path="/project-registration"><Dashboard role={role} projectRecords={projectRecords} onProjectCreated={(project) => setProjectRecords((current) => [project, ...current])} registrationMode /></RoleRoute>} />
+            <Route path="/projects" element={<RoleRoute role={role} path="/projects"><ProjectsPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
+            <Route path="/projects/:projectId" element={<RoleRoute role={role} path="/projects"><ProjectDetailsPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
             <Route path="/projects/:projectId/workflow" element={<RoleRoute role={role} path="/projects"><WorkflowPage projectId={location.pathname.split('/')[2]} /></RoleRoute>} />
-            <Route path="/projects/:projectId/bidding" element={<RoleRoute role={role} path="/projects"><BiddingPage activeBiddingProjectIds={activeBiddingProjectIds} bidSubmissions={bidSubmissions} /></RoleRoute>} />
-            <Route path="/company-dashboard/projects/:projectId/bidding" element={<RoleRoute role={role} path="/company-dashboard"><CompanyBiddingPage profile={profile} proposalSubmissions={proposalSubmissions} activeBiddingProjectIds={activeBiddingProjectIds} bidSubmissions={bidSubmissions} onBidSubmitted={(submission) => setBidSubmissions((current) => [...current, submission])} /></RoleRoute>} />
             <Route path="/projects/:projectId/compensation" element={<RoleRoute role={role} path="/projects"><CompensationPage role={role} projectId={location.pathname.split('/')[2]} /></RoleRoute>} />
             <Route path="/projects/:projectId/rr" element={<RoleRoute role={role} path="/projects"><RnRPage role={role} projectId={location.pathname.split('/')[2]} /></RoleRoute>} />
-            <Route path="/projects/:projectId/finance" element={<RoleRoute role={role} path="/projects"><SpecialistDashboard role="financeOfficer" profile={userProfiles.find((item) => item.role === 'financeOfficer')} projectId={location.pathname.split('/')[2]} /></RoleRoute>} />
             <Route path="/parcels" element={<RoleRoute role={role} path="/parcels"><ParcelListPage role={role} /></RoleRoute>} />
             <Route path="/parcels/:parcelId" element={<RoleRoute role={role} path="/parcels"><ParcelDetailPage role={role} /></RoleRoute>} />
             <Route path="/gis" element={<RoleRoute role={role} path="/gis"><GISMapPage role={role} /></RoleRoute>} />
             <Route path="/workflow" element={<RoleRoute role={role} path="/workflow"><WorkflowPage role={role} /></RoleRoute>} />
             <Route path="/compensation" element={<RoleRoute role={role} path="/compensation"><CompensationPage role={role} /></RoleRoute>} />
             <Route path="/rr" element={<RoleRoute role={role} path="/rr"><RnRPage role={role} /></RoleRoute>} />
-            <Route path="/minister/rr" element={<RoleRoute role={role} path="/minister/rr"><SpecialistDashboard role="rrAdministrator" profile={userProfiles.find((item) => item.role === 'rrAdministrator')} /></RoleRoute>} />
-            <Route path="/minister/finance" element={<RoleRoute role={role} path="/minister/finance"><SpecialistDashboard role="financeOfficer" profile={userProfiles.find((item) => item.role === 'financeOfficer')} /></RoleRoute>} />
             <Route path="/field-verification" element={<RoleRoute role={role} path="/field-verification"><FieldVerificationPage role={role} /></RoleRoute>} />
             <Route path="/alerts" element={<RoleRoute role={role} path="/alerts"><AlertsPage role={role} /></RoleRoute>} />
             <Route path="/documents" element={<RoleRoute role={role} path="/documents"><DocumentsPage role={role} /></RoleRoute>} />
-            <Route path="/reports" element={<RoleRoute role={role} path="/reports"><ReportsPage role={role} /></RoleRoute>} />
+            <Route path="/reports" element={<RoleRoute role={role} path="/reports"><ReportsPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
             <Route path="/citizen" element={<RoleRoute role={role} path="/citizen"><CitizenPortalPage /></RoleRoute>} />
             <Route path="/citizen/parcel" element={<RoleRoute role={role} path="/citizen/parcel"><CitizenPortalPage view="parcel" /></RoleRoute>} />
             <Route path="/citizen/acquisition-status" element={<RoleRoute role={role} path="/citizen/acquisition-status"><CitizenPortalPage view="acquisition-status" /></RoleRoute>} />
@@ -224,7 +230,6 @@ function AppLayout({ role, setRole, setIsLoggedIn }) {
             <Route path="/citizen/documents" element={<RoleRoute role={role} path="/citizen/documents"><CitizenPortalPage view="documents" /></RoleRoute>} />
             <Route path="/citizen/objections" element={<RoleRoute role={role} path="/citizen/objections"><CitizenPortalPage view="objections" /></RoleRoute>} />
             <Route path="/citizen/grievances" element={<RoleRoute role={role} path="/citizen/grievances"><CitizenPortalPage view="grievances" /></RoleRoute>} />
-            <Route path="/company-dashboard" element={<RoleRoute role={role} path="/company-dashboard"><CompanyDashboardPage profile={profile} proposalSubmissions={proposalSubmissions} bidSubmissions={bidSubmissions} activeBiddingProjectIds={activeBiddingProjectIds} onProposalSubmitted={(submission) => setProposalSubmissions((current) => [...current, submission])} onBidSubmitted={(submission) => setBidSubmissions((current) => [...current, submission])} /></RoleRoute>} />
             <Route path="*" element={<Navigate to={roleHomeMap[role]} replace />} />
           </Routes>
         </main>
@@ -236,6 +241,7 @@ function AppLayout({ role, setRole, setIsLoggedIn }) {
 function App() {
   const [role, setRole] = useState('nationalOfficer')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [projectRecords, setProjectRecords] = useState([...projects, ...lrbProjects])
 
   if (!isLoggedIn) {
     return <LoginPage onContinue={(selectedRole) => { setRole(selectedRole); setIsLoggedIn(true) }} />
@@ -243,7 +249,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <AppLayout role={role} setRole={setRole} setIsLoggedIn={setIsLoggedIn} />
+      <AppLayout role={role} setRole={setRole} setIsLoggedIn={setIsLoggedIn} projectRecords={projectRecords} setProjectRecords={setProjectRecords} />
     </BrowserRouter>
   )
 }
