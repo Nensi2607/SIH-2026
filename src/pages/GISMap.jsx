@@ -1,5 +1,6 @@
 import { MapContainer, TileLayer, Popup, Circle } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import '../utils/leafletIcons'
 import { corridorPolygons, getVisibleParcels, userProfiles } from '../data/mockData'
 
 const colorMap = {
@@ -27,8 +28,8 @@ export default function GISMapPage({ role = 'nationalOfficer', projectRecords })
         </div>
         <MapContainer center={[25.7, 82.7]} zoom={9} scrollWheelZoom className="leaflet-map">
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            attribution="&copy; OpenStreetMap contributors"
+            url="https://tile.openstreetmap.de/{z}/{x}/{y}.png"
           />
           {visiblePolygons.map((parcel) => (
             <Circle

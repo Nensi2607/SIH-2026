@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Circle, MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import '../utils/leafletIcons'
 import { canReviewProject, getVisibleProjects, projectStageFlow, userProfiles } from '../data/mockData'
 
 const projectCoordinates = {
@@ -133,7 +134,7 @@ export default function ProjectDetailsPage({ role = 'nationalOfficer', projectRe
       <div className="panel-card project-map-card">
         <div className="section-header"><div><div className="eyebrow">Project boundary and parcel context</div><h3>GIS Acquisition Map</h3></div><span className="pill neutral">{project.district}, {project.state}</span></div>
         <MapContainer center={getProjectCoordinates(project)} zoom={11} scrollWheelZoom className="project-detail-map">
-          <TileLayer attribution="&copy; OpenStreetMap contributors &copy; CARTO" url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+          <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://tile.openstreetmap.de/{z}/{x}/{y}.png" />
           <Circle center={getProjectCoordinates(project)} radius={Math.max(1800, project.totalParcels * 80)} pathOptions={{ color: '#0f766e', fillColor: '#14b8a6', fillOpacity: 0.22 }}><Popup><strong>{project.name}</strong><br />{project.totalLandRequired} planned area<br />{project.totalParcels} project parcels</Popup></Circle>
           {project.villages.map((village, index) => <Marker key={village} position={[getProjectCoordinates(project)[0] + (index - 1) * 0.012, getProjectCoordinates(project)[1] + (index % 2 ? 0.014 : -0.01)]}><Popup><strong>{village}</strong><br />Project village</Popup></Marker>)}
           {project.projectGeometry?.coordinates?.length > 1 && <Polyline positions={project.projectGeometry.coordinates.map(([longitude, latitude]) => [latitude, longitude])} pathOptions={{ color: '#0f766e', weight: 5 }} />}
