@@ -21,7 +21,7 @@ export default function CompensationPage({ projectId }) {
         <div className="kpi-card"><div className="kpi-head"><span className="kpi-label">Pending</span></div><strong>₹ 12.7 Cr</strong></div>
       </div>
 
-      <div className="content-grid two-up compensation-detail-grid">
+      <div className="content-grid compensation-detail-grid">
         <div className="panel-card">
           <div className="section-header"><h3>Payment Distribution</h3></div>
           <div className="chart-wrap small">

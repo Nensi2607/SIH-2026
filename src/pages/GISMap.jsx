@@ -1,6 +1,6 @@
 import { MapContainer, TileLayer, Popup, Circle } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { corridorPolygons, userProfiles } from '../data/mockData'
+import { corridorPolygons, getVisibleParcels, userProfiles } from '../data/mockData'
 
 const colorMap = {
   Completed: '#2e7d32',
@@ -11,13 +11,10 @@ const colorMap = {
   Paid: '#0f766e',
 }
 
-export default function GISMapPage({ role = 'nationalOfficer' }) {
+export default function GISMapPage({ role = 'nationalOfficer', projectRecords }) {
   const profile = userProfiles.find((item) => item.role === role)
-  const visiblePolygons = role === 'fieldOfficer'
-    ? corridorPolygons.filter((parcel) => profile?.assignedParcelIds?.includes(parcel.id))
-    : role === 'citizen'
-      ? corridorPolygons.filter((parcel) => profile?.parcelIds?.includes(parcel.id))
-      : corridorPolygons
+  const allowedParcelIds = new Set(getVisibleParcels(role, profile, projectRecords).map((parcel) => parcel.id))
+  const visiblePolygons = ['nationalOfficer', 'admin'].includes(role) ? corridorPolygons : corridorPolygons.filter((parcel) => allowedParcelIds.has(parcel.id))
   return (
     <div className="stack-block">
       <div className="section-header"><h2>GIS Acquisition Map</h2><span className="pill neutral">Corridor Readiness 92%</span></div>

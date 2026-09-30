@@ -1,8 +1,8 @@
 import { getVisibleDocuments, userProfiles } from '../data/mockData'
 
-export default function DocumentsPage({ role = 'nationalOfficer' }) {
+export default function DocumentsPage({ role = 'nationalOfficer', projectRecords = [] }) {
   const profile = userProfiles.find((item) => item.role === role)
-  const visibleDocuments = getVisibleDocuments(role, profile)
+  const visibleDocuments = getVisibleDocuments(role, profile, projectRecords)
   return (
     <div className="stack-block">
       <div className="section-header"><h2>Document Repository</h2><span className="pill neutral">Controlled records</span></div>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Circle, MapContainer, Marker, Polyline, Popup, TileLayer, useMapEvents } from 'react-leaflet'
 import { ArrowRight, CalendarClock, CheckCircle2, FilePlus2, MapPinned, Plus, Search, ShieldCheck } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
-import { getVisibleAlerts, parcels, projects, userProfiles } from '../data/mockData'
+import { configuredAuthorities, configuredLocations, getConfiguredAuthorities, getRoutingSuggestion, getVisibleAlerts, getVisibleProjects, parcels, projects, userProfiles, validateProjectRouting } from '../data/mockData'
 
 const initialProjectForm = {
   name: '',
@@ -57,7 +57,7 @@ function ProjectForm({ role, profile, onSave, onClose }) {
   const [alignmentPoints, setAlignmentPoints] = useState([])
   const [drawingAlignment, setDrawingAlignment] = useState(false)
   const [alignmentFile, setAlignmentFile] = useState(null)
-  const change = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  const change = (key, value) => { setError(''); setForm((current) => ({ ...current, [key]: value })) }
   const submit = (event) => {
     event.preventDefault()
     if (!form.name.trim() || !form.district.trim() || !form.authority.trim() || !form.totalLandRequired) {
@@ -127,28 +127,30 @@ function ProjectForm({ role, profile, onSave, onClose }) {
   </form>
 }
 
-function LrbProjectForm({ profile, onSave, onClose }) {
+function LrbProjectForm({ profile, onSave, onClose, initialProject }) {
   const [form, setForm] = useState({
-    name: '',
-    projectType: 'State Highway',
-    authority: profile.organization || profile.department || 'Varanasi Development Authority',
-    state: 'Uttar Pradesh',
-    district: profile.jurisdiction || 'Varanasi',
-    taluka: '',
-    villages: '',
-    totalLandRequired: '',
-    acquisitionArea: '',
-    startDate: '',
-    completionDate: '',
-    department: profile.department || '',
-    organizationName: profile.organization || profile.department || 'Varanasi Development Authority',
-    projectDescription: '',
-    purpose: '',
-    category: 'State Government Project',
+    name: initialProject?.name || '',
+    projectType: initialProject?.projectType || 'State Highway',
+    authority: initialProject?.authority || profile.organization || profile.department || 'Varanasi Development Authority',
+    state: initialProject?.state || 'Uttar Pradesh',
+    district: initialProject?.district || profile.jurisdiction || 'Varanasi',
+    taluka: initialProject?.taluka || '',
+    villages: initialProject?.villages?.join(', ') || '',
+    totalLandRequired: initialProject?.totalLandRequired?.replaceAll(',', '').replace(' ha', '') || '',
+    acquisitionArea: initialProject?.proposedAcquisitionArea?.replaceAll(',', '').replace(' ha', '') || '',
+    startDate: initialProject?.startDate || '',
+    completionDate: initialProject?.proposalDeadline || '',
+    department: initialProject?.contactDepartment || profile.department || '',
+    organizationName: initialProject?.lrbOrganization || profile.organization || profile.department || 'Varanasi Development Authority',
+    projectDescription: initialProject?.description || '',
+    purpose: initialProject?.purpose || '',
+    category: initialProject?.category || 'State Government Project',
     contactName: profile.name,
     designation: profile.title,
-    email: '',
-    phone: '',
+    email: initialProject?.contact?.split(' · ')[1] || '',
+    phone: initialProject?.contact?.split(' · ')[2] || '',
+    approvalLevel: initialProject?.approvalLevel || 'state',
+    approvalAuthorityId: initialProject?.approvalAuthorityId || 'state-up-pwd',
   })
   const [error, setError] = useState('')
   const [files, setFiles] = useState([])
@@ -157,19 +159,37 @@ function LrbProjectForm({ profile, onSave, onClose }) {
   const [drawingAlignment, setDrawingAlignment] = useState(false)
 
   const change = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  const configuredDistricts = configuredLocations.find((location) => location.state === form.state)?.districts || []
+  const availableAuthorities = getConfiguredAuthorities(form.approvalLevel, form.state, form.district)
+  const routeResult = validateProjectRouting(form)
+  const routeSuggestion = getRoutingSuggestion(form)
+  const alignmentCenter = form.district === 'Anand' ? [22.5645, 72.9289] : form.district === 'Lucknow' ? [26.8467, 80.9462] : form.district === 'Mirzapur' ? [25.1337, 82.5644] : [25.3176, 82.9739]
 
   const submit = (event, mode = 'draft') => {
     event.preventDefault()
-    if (!form.name.trim() || !form.district.trim() || !form.authority.trim() || !form.totalLandRequired || !form.projectDescription.trim() || !form.purpose.trim() || !form.contactName.trim() || !form.email.trim() || !form.phone.trim()) {
-      setError('Complete the required project proposal fields before saving or submitting.')
+    if (!form.name.trim()) {
+      setError('Enter a project name before saving this draft.')
       return
+    }
+
+    const routing = validateProjectRouting(form)
+    if (mode === 'submit') {
+      if (!form.district.trim() || !form.authority.trim() || !form.totalLandRequired || !form.projectDescription.trim() || !form.purpose.trim() || !form.contactName.trim() || !form.email.trim() || !form.phone.trim() || !form.approvalLevel || !form.approvalAuthorityId) {
+        setError('Complete all required project details, contact information, and approval authority before submitting.')
+        return
+      }
+      if (!routing.valid) {
+        setError(routing.reason)
+        return
+      }
     }
 
     const createdAt = new Date().toISOString()
     const projectStatus = mode === 'submit' ? 'SUBMITTED' : 'DRAFT'
     const projectStage = mode === 'submit' ? 'UNDER REVIEW' : 'DRAFT'
     const project = {
-      id: `LRB-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
+      ...(initialProject || {}),
+      id: initialProject?.id || `LRB-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
       name: form.name.trim(),
       projectType: form.projectType,
       authority: form.authority.trim(),
@@ -185,6 +205,7 @@ function LrbProjectForm({ profile, onSave, onClose }) {
       blocked: 0,
       progress: mode === 'submit' ? 5 : 0,
       status: projectStatus,
+      reviewStatus: projectStatus,
       stage: projectStage,
       readiness: mode === 'submit' ? 'Submitted for government review' : 'Draft saved by LRB',
       daysRemaining: form.completionDate ? Math.max(0, Math.ceil((new Date(form.completionDate) - new Date()) / 86400000)) : 90,
@@ -197,23 +218,36 @@ function LrbProjectForm({ profile, onSave, onClose }) {
       description: form.projectDescription.trim(),
       purpose: form.purpose.trim(),
       category: form.category,
-      projectCreatedBy: { userId: profile.id, name: profile.name, designation: profile.title, department: profile.department || form.department.trim(), role: 'lrb', createdAt },
-      createdByUserId: profile.id,
-      createdByName: profile.name,
+      startDate: form.startDate,
+      approvalLevel: form.approvalLevel,
+      approvalAuthorityId: form.approvalAuthorityId,
+      approvalAuthorityName: configuredAuthorities.find((item) => item.id === form.approvalAuthorityId)?.name || '',
+      approvalState: form.state,
+      approvalDistrict: form.district,
+      routingStatus: routing.valid ? (mode === 'submit' ? 'VALIDATED' : 'READY') : 'NOT VALIDATED',
+      routingValidated: routing.valid,
+      routingValidatedAt: routing.valid ? createdAt : null,
+      submissionDate: mode === 'submit' ? createdAt : initialProject?.submissionDate || null,
+      projectCreatedBy: initialProject?.projectCreatedBy || { userId: profile.id, name: profile.name, designation: profile.title, department: profile.department || form.department.trim(), role: 'lrb', createdAt },
+      createdByUserId: initialProject?.createdByUserId || profile.id,
+      createdByName: initialProject?.createdByName || profile.name,
+      updatedByUserId: profile.id,
+      updatedByName: profile.name,
       lrbOrganization: profile.organization || profile.department || form.organizationName.trim(),
       userRole: 'lrb',
-      createdAt,
+      createdAt: initialProject?.createdAt || createdAt,
       updatedAt: createdAt,
       projectGeometry: { type: 'LineString', coordinates: alignmentPoints.map(([latitude, longitude]) => [longitude, latitude]) },
       alignmentReference: alignmentFile?.name || null,
-      documents: [...files, ...(alignmentFile ? [alignmentFile] : [])].map((file) => ({ name: file.name, uploadedBy: profile.name, uploadedAt: createdAt, version: 1 })),
+      documents: [...(initialProject?.documents || []), ...files, ...(alignmentFile ? [alignmentFile] : [])].map((file) => ({ name: file.name, uploadedBy: profile.name, uploadedAt: createdAt, version: 1 })),
+      timeline: [...(initialProject?.timeline || []), { status: projectStatus, description: mode === 'submit' ? 'Proposal submitted for government review.' : 'Proposal draft saved.', actor: profile.name, at: createdAt }],
       keyParcel: '',
     }
     onSave(project)
   }
 
   return <form className="panel-card acquisition-project-form" onSubmit={(event) => submit(event, 'draft')}>
-    <div className="section-header"><div><div className="eyebrow">LRB proposal form</div><h3>Create project proposal</h3></div><button className="icon-button" type="button" aria-label="Close project form" onClick={onClose}>×</button></div>
+    <div className="section-header"><div><div className="eyebrow">LRB proposal form</div><h3>{initialProject ? 'Edit project draft' : 'Create project proposal'}</h3></div><button className="icon-button" type="button" aria-label="Close project form" onClick={onClose}>×</button></div>
     <p className="form-intro">The logged-in LRB user is recorded automatically as the creator of the proposal. Drafts remain editable by the LRB until the proposal is formally submitted for government review.</p>
 
     <div className="form-grid acquisition-fields">
@@ -222,8 +256,8 @@ function LrbProjectForm({ profile, onSave, onClose }) {
       <label>Project Type<select value={form.projectType} onChange={(event) => change('projectType', event.target.value)}>{['State Highway', 'National Highway', 'Railway', 'Industrial Corridor', 'Urban Infrastructure', 'Irrigation', 'Other'].map((type) => <option key={type}>{type}</option>)}</select></label>
       <label>Project Requiring Body *<input value={form.authority} onChange={(event) => change('authority', event.target.value)} required /></label>
       <label>Department / Organization<input value={form.department} onChange={(event) => change('department', event.target.value)} /></label>
-      <label>State<input value={form.state} onChange={(event) => change('state', event.target.value)} /></label>
-      <label>District *<input value={form.district} onChange={(event) => change('district', event.target.value)} required /></label>
+      <label>State *<select value={form.state} onChange={(event) => { setError(''); setForm((current) => ({ ...current, state: event.target.value, district: '', approvalAuthorityId: '' })); setAlignmentPoints([]) }} required>{configuredLocations.map((location) => <option key={location.state}>{location.state}</option>)}</select></label>
+      <label>District *<select value={form.district} onChange={(event) => { setError(''); setForm((current) => ({ ...current, district: event.target.value, approvalAuthorityId: '' })); setAlignmentPoints([]) }} required><option value="">Select district</option>{configuredDistricts.map((district) => <option key={district}>{district}</option>)}</select></label>
       <label>Taluka / Tehsil<input value={form.taluka} onChange={(event) => change('taluka', event.target.value)} /></label>
       <label>Villages<input value={form.villages} onChange={(event) => change('villages', event.target.value)} placeholder="Separate villages with commas" /></label>
       <label>Estimated Project Area (ha) *<input type="number" step="0.01" min="0.01" value={form.totalLandRequired} onChange={(event) => change('totalLandRequired', event.target.value)} required /></label>
@@ -241,7 +275,26 @@ function LrbProjectForm({ profile, onSave, onClose }) {
       <label className="acquisition-full-field">Supporting Documents<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.geojson,.json,.kml,.kmz,.zip" onChange={(event) => setFiles(Array.from(event.target.files || []))} /></label>
     </div>
 
-    <div className="alignment-section"><div className="alignment-note"><MapPinned size={17} /><span><strong>Project alignment / GIS input</strong>Draw the corridor on the map or upload GIS-compatible alignment data. Candidate parcels are identified only through GIS spatial intersection with cadastral parcel layers.</span></div><div className="alignment-controls"><button type="button" className={drawingAlignment ? 'secondary-btn small alignment-active' : 'secondary-btn small'} onClick={() => setDrawingAlignment((active) => !active)}>{drawingAlignment ? 'Finish drawing' : 'Draw alignment'}</button><button type="button" className="secondary-btn small" onClick={() => setAlignmentPoints([])} disabled={!alignmentPoints.length}>Clear points</button><label className="alignment-upload">Upload GIS alignment<input type="file" accept=".geojson,.json,.kml,.kmz,.zip" onChange={(event) => setAlignmentFile(event.target.files?.[0] || null)} /></label><span>{alignmentPoints.length} alignment points{alignmentFile ? ` · ${alignmentFile.name}` : ''}</span></div><MapContainer center={[25.3176, 82.9739]} zoom={13} scrollWheelZoom={false} className="alignment-map"><TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" /><AlignmentClickCapture enabled={drawingAlignment} onPoint={(point) => setAlignmentPoints((current) => [...current, point])} />{alignmentPoints.map((position, index) => <Marker key={`${position.join('-')}-${index}`} position={position}><Popup>Alignment point {index + 1}</Popup></Marker>)}{alignmentPoints.length > 1 && <Polyline positions={alignmentPoints} pathOptions={{ color: '#0f766e', weight: 5 }} />}</MapContainer><p className="map-planning-note">{drawingAlignment ? 'Click the map to add corridor points.' : 'Click Draw alignment to digitize the project area.'} The system relies on GIS spatial intersection only; it does not use AI detection or document-based parcel extraction.</p></div>
+    <section className="approval-authority-section" aria-labelledby="approval-authority-title">
+      <div><div className="eyebrow">Approval authority</div><h4 id="approval-authority-title">Who will review / approve this project?</h4><p>Select the authority you believe is responsible. BHU-SETU checks the selection against configured rules before submission.</p></div>
+      <div className="form-grid acquisition-fields">
+        <label>Approval level *<select value={form.approvalLevel} onChange={(event) => { setError(''); setForm((current) => ({ ...current, approvalLevel: event.target.value, approvalAuthorityId: '' })) }} required><option value="central">Central Government</option><option value="state">State Government</option><option value="district">District / Competent Authority</option></select></label>
+        <label>Approving authority *<select value={form.approvalAuthorityId} onChange={(event) => change('approvalAuthorityId', event.target.value)} required><option value="">Select configured authority</option>{availableAuthorities.map((authority) => <option key={authority.id} value={authority.id}>{authority.name}</option>)}</select></label>
+        <label>Approval state<input value={form.state} readOnly /></label>
+        <label>Approval district<input value={form.district} readOnly /></label>
+      </div>
+      <div className={`routing-validation ${routeResult.valid ? 'is-valid' : routeSuggestion.authority ? 'is-invalid' : ''}`} role="status">
+        <strong>{routeResult.valid ? 'Routing validated for submission' : routeSuggestion.authority ? 'Authority selection needs review' : 'Routing validation pending'}</strong>
+        {routeResult.valid ? <span>{routeSuggestion.reason}</span> : routeSuggestion.authority ? <><span>{routeResult.reason}</span><span><b>Suggested Approval Authority:</b> {routeSuggestion.authority.name}</span><span><b>Reason:</b> {routeSuggestion.reason}</span></> : <span>{routeSuggestion.reason}</span>}
+      </div>
+    </section>
+
+    <div className="alignment-section">
+      <div className="alignment-note"><MapPinned size={17} /><span><strong>Project alignment / GIS input</strong>Draw the corridor or upload GIS-compatible alignment data. Candidate parcels require spatial intersection with cadastral boundaries.</span></div>
+      <div className="alignment-controls"><button type="button" className={drawingAlignment ? 'secondary-btn small alignment-active' : 'secondary-btn small'} onClick={() => setDrawingAlignment((active) => !active)}>{drawingAlignment ? 'Finish drawing' : 'Draw alignment'}</button><button type="button" className="secondary-btn small" onClick={() => setAlignmentPoints([])} disabled={!alignmentPoints.length}>Clear points</button><label className="alignment-upload">Upload GIS alignment<input type="file" accept=".geojson,.json,.kml,.kmz,.zip" onChange={(event) => setAlignmentFile(event.target.files?.[0] || null)} /></label><span>{alignmentPoints.length} alignment points{alignmentFile ? ` · ${alignmentFile.name}` : ''}</span></div>
+      <MapContainer key={`${form.state}-${form.district}`} center={alignmentCenter} zoom={13} scrollWheelZoom={false} className="alignment-map"><TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" /><AlignmentClickCapture enabled={drawingAlignment} onPoint={(point) => setAlignmentPoints((current) => [...current, point])} /><Marker position={alignmentCenter}><Popup>{form.district || 'Project'} location</Popup></Marker>{alignmentPoints.map((position, index) => <Marker key={`${position.join('-')}-${index}`} position={position}><Popup>Alignment point {index + 1}</Popup></Marker>)}{alignmentPoints.length > 1 && <Polyline positions={alignmentPoints} pathOptions={{ color: '#0f766e', weight: 5 }} />}</MapContainer>
+      <p className="map-planning-note">{drawingAlignment ? 'Click the map to add corridor points.' : 'Click Draw alignment to digitize the project area.'} Uploaded alignment files are recorded as supporting documents in this demo.</p>
+    </div>
 
     {error && <p className="login-error" role="alert">{error}</p>}
     <div className="form-actions">
@@ -256,22 +309,16 @@ function LrbProjectForm({ profile, onSave, onClose }) {
   </form>
 }
 
-export default function LandAcquisitionDashboard({ role, projectRecords = projects, onProjectCreated, registrationMode = false }) {
+export default function LandAcquisitionDashboard({ role, projectRecords = projects, onProjectCreated, onProjectUpdated, registrationMode = false }) {
   const navigate = useNavigate()
   const [showForm, setShowForm] = useState(Boolean(registrationMode))
+  const [editingProject, setEditingProject] = useState(null)
   const [search, setSearch] = useState('')
   const profile = userProfiles.find((item) => item.role === role) || userProfiles[0]
-  const visibleProjects = useMemo(() => {
-    let scoped = projectRecords
-    if (role === 'stateOfficer') scoped = scoped.filter((project) => project.state === profile.jurisdiction || project.ownerRole === role)
-    if (role === 'districtOfficer') scoped = scoped.filter((project) => project.district === profile.jurisdiction || project.ownerRole === role)
-    if (role === 'fieldOfficer') scoped = scoped.filter((project) => profile.assignedParcelIds?.some((id) => parcels.find((parcel) => parcel.id === id)?.projectId === project.id))
-    if (role === 'citizen') scoped = scoped.filter((project) => profile.parcelIds?.some((id) => parcels.find((parcel) => parcel.id === id)?.projectId === project.id))
-    return scoped.filter((project) => `${project.name} ${project.id} ${project.district} ${project.state}`.toLowerCase().includes(search.toLowerCase()))
-  }, [projectRecords, profile, role, search])
+  const visibleProjects = useMemo(() => getVisibleProjects(role, profile, projectRecords).filter((project) => `${project.name} ${project.id} ${project.district} ${project.state}`.toLowerCase().includes(search.toLowerCase())), [projectRecords, profile, role, search])
 
-  const alerts = getVisibleAlerts(role, profile).slice(0, 4)
-  const canCreate = ['nationalOfficer', 'stateOfficer', 'districtOfficer', 'lrb', 'admin'].includes(role)
+  const alerts = getVisibleAlerts(role, profile, projectRecords).slice(0, 4)
+  const canCreate = role === 'lrb'
   const title = role === 'stateOfficer' ? 'State acquisition dashboard' : role === 'districtOfficer' ? 'District acquisition dashboard' : role === 'lrb' ? 'LRB project dashboard' : role === 'fieldOfficer' ? 'Field verification dashboard' : role === 'citizen' ? 'My land acquisition' : role === 'admin' ? 'Administration dashboard' : 'Dashboard'
   const stateProgressData = Object.values(visibleProjects.reduce((result, project) => {
     const existing = result[project.state] || { state: project.state, active: 0, completed: 0, total: 0 }
@@ -300,6 +347,15 @@ export default function LandAcquisitionDashboard({ role, projectRecords = projec
     { label: 'Active projects', value: numberFormat.format(visibleProjects.filter((project) => project.status !== 'Completed').length), icon: MapPinned, tone: 'mint' },
     { label: 'Completed projects', value: numberFormat.format(visibleProjects.filter((project) => project.status === 'Completed').length), icon: CheckCircle2, tone: 'green' },
   ]
+  const nationalMetrics = [
+    { label: 'Total projects', value: visibleProjects.length, icon: ShieldCheck, tone: 'blue' },
+    { label: 'Projects under review', value: visibleProjects.filter((project) => ['SUBMITTED', 'UNDER REVIEW', 'RESUBMITTED'].includes(project.status)).length, icon: Search, tone: 'mint' },
+    { label: 'Projects approved', value: visibleProjects.filter((project) => project.status === 'APPROVED').length, icon: CheckCircle2, tone: 'green' },
+    { label: 'Projects rejected', value: visibleProjects.filter((project) => project.status === 'REJECTED').length, icon: ShieldCheck, tone: 'danger' },
+    { label: 'Projects with query', value: visibleProjects.filter((project) => project.status === 'QUERY RAISED').length, icon: CalendarClock, tone: 'warning' },
+  ]
+  const statusBreakdown = Object.entries(visibleProjects.reduce((totals, project) => ({ ...totals, [project.status]: (totals[project.status] || 0) + 1 }), {})).map(([name, count]) => ({ name, count }))
+  const typeBreakdown = Object.entries(visibleProjects.reduce((totals, project) => ({ ...totals, [project.projectType]: (totals[project.projectType] || 0) + 1 }), {})).map(([name, count]) => ({ name, count }))
 
   const createProject = (project) => {
     onProjectCreated(project)
@@ -309,7 +365,7 @@ export default function LandAcquisitionDashboard({ role, projectRecords = projec
 
   if (registrationMode) return <div className="stack-block registration-page">
     <div className="section-header"><div><div className="eyebrow">Project registration</div><h2>Register an acquisition project</h2><p>Project creator and responsible officer are recorded from your signed-in account.</p></div><span className="pill neutral">{profile.jurisdiction || 'India'}</span></div>
-    {showForm ? <ProjectForm role={role} profile={profile} onSave={createProject} onClose={() => setShowForm(false)} /> : <div className="panel-card registration-restart"><p>Registration was closed without saving.</p><button className="primary-btn" type="button" onClick={() => setShowForm(true)}><FilePlus2 size={15} /> Continue registration</button></div>}
+    {showForm ? role === 'lrb' ? <LrbProjectForm profile={profile} onSave={createProject} onClose={() => setShowForm(false)} /> : <ProjectForm role={role} profile={profile} onSave={createProject} onClose={() => setShowForm(false)} /> : <div className="panel-card registration-restart"><p>Registration was closed without saving.</p><button className="primary-btn" type="button" onClick={() => setShowForm(true)}><FilePlus2 size={15} /> Continue registration</button></div>}
   </div>
 
   if (role === 'lrb') {
@@ -317,29 +373,30 @@ export default function LandAcquisitionDashboard({ role, projectRecords = projec
       { label: 'Total Projects', value: String(visibleProjects.length), icon: ShieldCheck, tone: 'blue' },
       { label: 'Draft Projects', value: String(visibleProjects.filter((project) => project.status === 'DRAFT').length), icon: FilePlus2, tone: 'mint' },
       { label: 'Submitted Projects', value: String(visibleProjects.filter((project) => project.status === 'SUBMITTED').length), icon: ArrowRight, tone: 'orange' },
-      { label: 'Under Government Review', value: String(visibleProjects.filter((project) => project.status === 'UNDER REVIEW').length), icon: Search, tone: 'purple' },
+      { label: 'Under Government Review', value: String(visibleProjects.filter((project) => ['UNDER REVIEW', 'RESUBMITTED'].includes(project.status)).length), icon: Search, tone: 'purple' },
       { label: 'Projects with Query Raised', value: String(visibleProjects.filter((project) => project.status === 'QUERY RAISED').length), icon: CalendarClock, tone: 'warning' },
       { label: 'Approved Projects', value: String(visibleProjects.filter((project) => project.status === 'APPROVED').length), icon: CheckCircle2, tone: 'green' },
       { label: 'Rejected Projects', value: String(visibleProjects.filter((project) => project.status === 'REJECTED').length), icon: ShieldCheck, tone: 'danger' },
-      { label: 'Projects in Land Acquisition', value: String(visibleProjects.filter((project) => project.status === 'APPROVED' || project.status === 'RESUBMITTED').length), icon: MapPinned, tone: 'blue' },
-      { label: 'Projects Completed', value: String(visibleProjects.filter((project) => project.status === 'COMPLETED').length), icon: CheckCircle2, tone: 'green' },
+      { label: 'Projects in Land Acquisition', value: String(visibleProjects.filter((project) => ['APPROVED', 'IN ACQUISITION'].includes(project.status)).length), icon: MapPinned, tone: 'blue' },
+      { label: 'Projects Completed', value: String(visibleProjects.filter((project) => ['COMPLETED', 'Completed'].includes(project.status)).length), icon: CheckCircle2, tone: 'green' },
     ]
 
     return <div className="stack-block acquisition-dashboard">
       <div className="section-header acquisition-dashboard-heading"><div><div className="eyebrow">Land Requiring Body Portal</div><h2>LRB dashboard</h2><p>Track project proposals, drafts, review queries and acquisition progress for projects initiated by your organization.</p></div><span className="pill neutral">{profile.organization || profile.department || profile.jurisdiction}</span></div>
       <div className="kpi-grid acquisition-metrics">{lrbMetrics.map((metric) => <StatCard key={metric.label} {...metric} />)}</div>
       <div className="acquisition-toolbar"><div><strong>Project proposals</strong><span>{visibleProjects.length} proposals in your portfolio</span></div><button className="primary-btn small" type="button" onClick={() => setShowForm(true)}><FilePlus2 size={15} /> Create New Project Proposal</button></div>
-      {showForm && <LrbProjectForm profile={profile} onSave={(project) => { createProject(project); setShowForm(false) }} onClose={() => setShowForm(false)} />}
+      {showForm && <LrbProjectForm profile={profile} initialProject={editingProject} onSave={(project) => { if (editingProject) onProjectUpdated(project); else createProject(project); setEditingProject(null); setShowForm(false) }} onClose={() => { setEditingProject(null); setShowForm(false) }} />}
 
       <div className="panel-card acquisition-project-section"><div className="section-header"><div><div className="eyebrow">Proposal register</div><h3>Project proposals</h3></div><label className="acquisition-search"><Search size={15} /><input aria-label="Search LRB proposals" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search project name, ID or status" /></label></div>
-        <div className="table-panel acquisition-project-table"><table><thead><tr><th>Project Name</th><th>Project ID</th><th>Project Type</th><th>State</th><th>District</th><th>Date Created</th><th>Current Status</th><th>Last Updated</th><th>Action</th></tr></thead><tbody>{visibleProjects.map((project) => <tr key={project.id}><td><strong>{project.name}</strong></td><td>{project.id}</td><td>{project.projectType}</td><td>{project.state}</td><td>{project.district}</td><td>{project.createdAt ? new Date(project.createdAt).toLocaleDateString('en-IN') : 'New'}</td><td><span className={`status-badge ${project.status === 'DRAFT' ? 'warning' : project.status === 'QUERY RAISED' ? 'danger' : project.status === 'APPROVED' ? 'success' : 'neutral'}`}>{project.status || 'DRAFT'}</span></td><td>{project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}</td><td><div className="inline-actions"><Link className="secondary-btn small" to={`/projects/${project.id}`}>View</Link>{project.status === 'DRAFT' && <button type="button" className="secondary-btn small" onClick={() => setShowForm(true)}>Edit Draft</button>}{project.status === 'QUERY RAISED' && <button type="button" className="secondary-btn small" onClick={() => navigate(`/projects/${project.id}`)}>Respond to Query</button>}{project.status === 'APPROVED' && <button type="button" className="secondary-btn small" onClick={() => navigate(`/projects/${project.id}`)}>View Acquisition Progress</button>}</div></td></tr>)}{visibleProjects.length === 0 && <tr><td colSpan="9"><div className="empty-state">No project proposals match the current filter.</div></td></tr>}</tbody></table></div>
+        <div className="table-panel acquisition-project-table"><table><thead><tr><th>Project Name</th><th>Project ID</th><th>Project Type</th><th>State</th><th>District</th><th>Date Created</th><th>Current Status</th><th>Last Updated</th><th>Action</th></tr></thead><tbody>{visibleProjects.map((project) => <tr key={project.id} className="project-clickable-row" onClick={(event) => { if (event.target.closest('a, button, input, select, textarea')) return; navigate(`/projects/${project.id}`) }}><td><strong>{project.name}</strong></td><td>{project.id}</td><td>{project.projectType}</td><td>{project.state}</td><td>{project.district}</td><td>{project.createdAt ? new Date(project.createdAt).toLocaleDateString('en-IN') : 'New'}</td><td><span className={`status-badge ${project.status === 'DRAFT' ? 'warning' : project.status === 'QUERY RAISED' ? 'danger' : project.status === 'APPROVED' ? 'success' : 'neutral'}`}>{project.status || 'DRAFT'}</span></td><td>{project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}</td><td><div className="inline-actions"><Link className="secondary-btn small" to={`/projects/${project.id}`}>View</Link>{project.status === 'DRAFT' && <button type="button" className="secondary-btn small" onClick={() => { setEditingProject(project); setShowForm(true) }}>Edit Draft</button>}{project.status === 'QUERY RAISED' && <button type="button" className="secondary-btn small" onClick={() => navigate(`/projects/${project.id}`)}>Respond to Query</button>}{project.status === 'APPROVED' && <button type="button" className="secondary-btn small" onClick={() => navigate(`/projects/${project.id}`)}>View Acquisition Progress</button>}</div></td></tr>)}{visibleProjects.length === 0 && <tr><td colSpan="9"><div className="empty-state">Create your first project proposal.</div></td></tr>}</tbody></table></div>
       </div>
     </div>
   }
 
   if (role === 'nationalOfficer') return <div className="stack-block acquisition-dashboard national-dashboard">
     <div className="section-header acquisition-dashboard-heading"><div><div className="eyebrow">National Land Acquisition Management System</div><h2>Dashboard</h2></div><span className="pill neutral">India</span></div>
-    <div className="kpi-grid acquisition-metrics">{metrics.map((metric) => <StatCard key={metric.label} {...metric} />)}</div>
+    <div className="kpi-grid acquisition-metrics national-review-metrics">{nationalMetrics.map((metric) => <StatCard key={metric.label} {...metric} />)}</div>
+    <div className="acquisition-toolbar"><div><strong>Government review</strong><span>Only proposals routed to this authority can be actioned.</span></div><Link className="primary-btn small" to="/review-projects">Open Review Projects <ArrowRight size={14} /></Link></div>
 
     <div className="dashboard-two-up">
       <section className="panel-card dashboard-panel">
@@ -376,6 +433,9 @@ export default function LandAcquisitionDashboard({ role, projectRecords = projec
         </div>
       </section>
     </div>
+    <div className="dashboard-two-up">
+      {[['Projects by type', typeBreakdown], ['Projects by status', statusBreakdown]].map(([title, items]) => <section className="panel-card dashboard-panel" key={title}><div className="section-header"><div><div className="eyebrow">National portfolio</div><h3>{title}</h3></div></div><div className="state-progress-list">{items.map((item) => <div className="state-progress-item" key={item.name}><div className="state-progress-head"><strong>{item.name}</strong><span>{item.count}</span></div><div className="progress-line"><span style={{ width: `${Math.round((item.count / Math.max(visibleProjects.length, 1)) * 100)}%` }} /></div></div>)}{!items.length && <div className="empty-state">No project records available.</div>}</div></section>)}
+    </div>
   </div>
 
   return <div className="stack-block acquisition-dashboard">
@@ -392,7 +452,7 @@ export default function LandAcquisitionDashboard({ role, projectRecords = projec
         </div>
 
         <div className="acquisition-project-section panel-card"><div className="section-header"><div><div className="eyebrow">Project portfolio</div><h3>Projects</h3></div><label className="acquisition-search"><Search size={15} /><input aria-label="Search projects" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Project, ID, district or state" /></label></div>
-          <div className="table-panel acquisition-project-table"><table><thead><tr><th>Project</th><th>District / state</th><th>Parcels</th><th>Current stage</th><th>Progress</th><th>Status</th><th /></tr></thead><tbody>{visibleProjects.map((project) => <tr key={project.id}><td><Link to={`/projects/${project.id}`}><strong>{project.name}</strong></Link><small className="table-subtext">{project.id} · {project.authority}</small></td><td>{project.district}, {project.state}</td><td>{project.totalParcels}</td><td>{project.stage}</td><td><div className="progress-line"><span style={{ width: `${project.progress}%` }} /></div> {project.progress}%</td><td><span className={`status-badge ${project.status === 'Delayed' ? 'danger' : project.status === 'Attention' ? 'warning' : 'success'}`}>{project.status}</span></td><td><Link className="icon-link" to={`/projects/${project.id}`} aria-label={`Open ${project.name}`}><ArrowRight size={16} /></Link></td></tr>)}{visibleProjects.length === 0 && <tr><td colSpan="7"><div className="empty-state">No projects match this search.</div></td></tr>}</tbody></table></div>
+          <div className="table-panel acquisition-project-table"><table><thead><tr><th>Project</th><th>District / state</th><th>Parcels</th><th>Current stage</th><th>Progress</th><th>Status</th><th /></tr></thead><tbody>{visibleProjects.map((project) => <tr key={project.id} className="project-clickable-row" onClick={(event) => { if (event.target.closest('a, button, input, select, textarea')) return; navigate(`/projects/${project.id}`) }}><td><Link to={`/projects/${project.id}`}><strong>{project.name}</strong></Link><small className="table-subtext">{project.id} · {project.authority}</small></td><td>{project.district}, {project.state}</td><td>{project.totalParcels}</td><td>{project.stage}</td><td><div className="progress-line"><span style={{ width: `${project.progress}%` }} /></div> {project.progress}%</td><td><span className={`status-badge ${project.status === 'Delayed' ? 'danger' : project.status === 'Attention' ? 'warning' : 'success'}`}>{project.status}</span></td><td><Link className="icon-link" to={`/projects/${project.id}`} aria-label={`Open ${project.name}`}><ArrowRight size={16} /></Link></td></tr>)}{visibleProjects.length === 0 && <tr><td colSpan="7"><div className="empty-state">No projects match this search.</div></td></tr>}</tbody></table></div>
         </div>
 
         <div className="acquisition-bottom-grid"><section className="panel-card"><div className="section-header"><div><div className="eyebrow">Statutory clocks</div><h3>Deadlines & actions</h3></div><Link className="secondary-btn small" to="/alerts">All alerts <ArrowRight size={14} /></Link></div><div className="list-stack">{alerts.map((alert) => <div className="alert-item" key={alert.id}><span className={`alert-icon ${alert.severity === 'Critical' ? 'critical' : ''}`}><CalendarClock size={15} /></span><div className="alert-body"><strong>{alert.title}</strong><p>{alert.project} · {alert.parcel}</p><small>Due {alert.deadline} · {alert.officer}</small></div><span className={`status-badge ${alert.severity === 'Critical' ? 'danger' : 'warning'}`}>{alert.severity}</span></div>)}{!alerts.length && <div className="empty-state">No upcoming actions in this account.</div>}</div></section>

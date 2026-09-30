@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getVisibleParcels, userProfiles } from '../data/mockData'
 
-export default function ParcelListPage({ role = 'nationalOfficer' }) {
+export default function ParcelListPage({ role = 'nationalOfficer', projectRecords }) {
   const [query, setQuery] = useState('')
   const [stage, setStage] = useState('All')
   const [status, setStatus] = useState('All')
 
   const profile = userProfiles.find((item) => item.role === role)
-  const scopedParcels = getVisibleParcels(role, profile)
+  const scopedParcels = getVisibleParcels(role, profile, projectRecords)
 
   const filteredParcels = useMemo(() => {
     return scopedParcels.filter((parcel) => {

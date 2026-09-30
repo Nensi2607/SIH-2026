@@ -16,11 +16,11 @@ function getSeverityClass(severity) {
   return severity === 'Critical' ? 'danger' : severity === 'Info' ? 'neutral' : 'warning'
 }
 
-export default function AlertsPage({ role = 'nationalOfficer' }) {
+export default function AlertsPage({ role = 'nationalOfficer', projectRecords = [] }) {
   const [severityFilter, setSeverityFilter] = useState('All')
   const [categoryFilter, setCategoryFilter] = useState('All')
   const profile = userProfiles.find((item) => item.role === role)
-  const visibleAlerts = getVisibleAlerts(role, profile)
+  const visibleAlerts = getVisibleAlerts(role, profile, projectRecords)
   const filteredAlerts = visibleAlerts.filter((alert) => {
     const matchesSeverity = severityFilter === 'All' || alert.severity === severityFilter
     const matchesCategory = categoryFilter === 'All' || getAlertCategory(alert) === categoryFilter

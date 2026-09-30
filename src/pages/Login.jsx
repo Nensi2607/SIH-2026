@@ -6,7 +6,7 @@ const demoPassword = 'LandDemo#2026'
 const demoAccounts = roleOptions.map((option) => {
   const profile = userProfiles.find((user) => user.role === option.id)
   const accountPrefix = option.id === 'nationalOfficer' ? 'anita.sharma' : option.id === 'stateOfficer' ? 'rajesh.patel' : option.id === 'districtOfficer' ? 'priya.shah' : option.id === 'lrb' ? 'neha.verma' : option.id === 'fieldOfficer' ? 'amit.solanki' : option.id === 'citizen' ? 'ramesh.patel' : 'kavita.rao'
-  return { ...option, name: profile.name, email: `${accountPrefix}@bhu-setu.demo`, password: demoPassword }
+  return { ...option, name: profile.name, email: `${accountPrefix}@samanvaya.demo`, password: demoPassword }
 })
 
 export default function LoginPage({ onContinue }) {
@@ -36,7 +36,7 @@ export default function LoginPage({ onContinue }) {
   return <div className="login-shell login-shell-auth">
     <div className="login-layout acquisition-login-layout">
       <section className="login-card">
-        <div className="login-brand"><div className="brand-mark large"><Landmark size={23} /></div><div><div className="eyebrow">BHŪ-SETU · SECURE ACCESS</div><h1>Sign in to the acquisition system</h1></div></div>
+        <div className="login-brand"><div className="brand-mark large"><Landmark size={23} /></div><div><div className="eyebrow">SAMANVAYA · SECURE ACCESS</div><h1>Sign in to the acquisition system</h1></div></div>
         <p className="subtitle">National Land Acquisition Management System</p>
         <p className="microcopy">GIS-led land acquisition monitoring for government officers, field teams and affected landowners.</p>
         <form className="login-form" onSubmit={signIn}>

@@ -9,14 +9,200 @@ export const roleOptions = [
 ]
 
 export const userProfiles = [
-  { id: 'USR001', name: 'Anita Sharma', role: 'nationalOfficer', title: 'National Ministry Officer', department: 'Ministry of Rural Development', jurisdiction: 'India' },
-  { id: 'USR002', name: 'Rajesh Patel', role: 'stateOfficer', title: 'State Land Acquisition Officer', department: 'Revenue Department, Uttar Pradesh', jurisdiction: 'Uttar Pradesh' },
-  { id: 'USR003', name: 'Priya Shah', role: 'districtOfficer', title: 'District Collector / CALA', department: 'District Administration, Varanasi', jurisdiction: 'Varanasi' },
+  { id: 'USR001', name: 'Anita Sharma', role: 'nationalOfficer', title: 'National Ministry Officer', department: 'Ministry of Road Transport and Highways', jurisdiction: 'India', authorityId: 'central-morth', authorityIds: ['central-morth', 'central-railways'] },
+  { id: 'USR002', name: 'Rajesh Patel', role: 'stateOfficer', title: 'State Land Acquisition Officer', department: 'Revenue Department, Uttar Pradesh', jurisdiction: 'Uttar Pradesh', state: 'Uttar Pradesh', authorityId: 'state-up-pwd', authorityIds: ['state-up-pwd', 'state-up-irrigation', 'state-up-development', 'state-up-revenue'] },
+  { id: 'USR003', name: 'Priya Shah', role: 'districtOfficer', title: 'District Collector / CALA', department: 'District Administration, Varanasi', jurisdiction: 'Varanasi', state: 'Uttar Pradesh', district: 'Varanasi', authorityId: 'district-up-varanasi' },
   { id: 'USR007', name: 'Neha Verma', role: 'lrb', title: 'Land Requiring Body Officer', department: 'Varanasi Development Authority', jurisdiction: 'Varanasi', organization: 'Varanasi Development Authority' },
-  { id: 'USR004', name: 'Amit Solanki', role: 'fieldOfficer', title: 'Field Verification Officer', department: 'District Land Records Office', jurisdiction: 'Varanasi', assignedParcelIds: ['ULPIN-UP-7812-004', 'ULPIN-UP-7812-011', 'ULPIN-UP-4821-220'] },
+  { id: 'USR004', name: 'Amit Solanki', role: 'fieldOfficer', title: 'Field Verification Officer', department: 'District Land Records Office', jurisdiction: 'Varanasi', state: 'Uttar Pradesh', district: 'Varanasi', email: 'amit.solanki@bhu-setu.demo', phone: '+91 90000 00004', assignedParcelIds: ['ULPIN-UP-7812-004', 'ULPIN-UP-7812-011', 'ULPIN-UP-4821-220'] },
   { id: 'USR005', name: 'Ramesh Patel', role: 'citizen', title: 'Citizen / Landowner', jurisdiction: 'Varanasi', parcelIds: ['ULPIN-UP-7812-004'] },
   { id: 'USR006', name: 'Kavita Rao', role: 'admin', title: 'System Administrator', department: 'Land Acquisition System Administration', jurisdiction: 'India' },
 ]
+
+export const affectedParcelMetadata = {
+  'ULPIN-UP-7812-004': {
+    gisAffected: true,
+    affectedArea: '0.64 ha',
+    landownerDetails: {
+      name: 'Ritu Singh',
+      familyMembers: 4,
+      mobile: '+91 98765 43210',
+      respondentType: 'Owner / cultivator',
+      status: 'Primary claimant',
+    },
+    fieldVerificationStatus: 'Pending district review',
+    currentAcquisitionStatus: 'Notification issued',
+    notificationStatus: 'Not yet sent',
+    notificationHistory: [],
+  },
+  'ULPIN-UP-7812-011': {
+    gisAffected: true,
+    affectedArea: '0.88 ha',
+    landownerDetails: {
+      name: 'Anil Verma',
+      familyMembers: 6,
+      mobile: '+91 99887 55661',
+      respondentType: 'Joint ownership',
+      status: 'Multiple claimants',
+    },
+    fieldVerificationStatus: 'Discrepancy found',
+    currentAcquisitionStatus: 'Objection hearing pending',
+    notificationStatus: 'In draft',
+    notificationHistory: [],
+  },
+  'ULPIN-UP-7402-012': {
+    gisAffected: true,
+    affectedArea: '0.42 ha',
+    landownerDetails: {
+      name: 'Suman Yadav',
+      familyMembers: 2,
+      mobile: '+91 97654 12890',
+      respondentType: 'Residential owner',
+      status: 'Primary claimant',
+    },
+    fieldVerificationStatus: 'Verified',
+    currentAcquisitionStatus: 'Notification current',
+    notificationStatus: 'Awaiting dispatch',
+    notificationHistory: [],
+  },
+  'ULPIN-UP-4821-220': {
+    gisAffected: true,
+    affectedArea: '0.71 ha',
+    landownerDetails: {
+      name: 'Gopal Mishra',
+      familyMembers: 5,
+      mobile: '+91 94150 33662',
+      respondentType: 'Agricultural owner',
+      status: 'Family affected',
+    },
+    fieldVerificationStatus: 'Survey in progress',
+    currentAcquisitionStatus: 'Survey in progress',
+    notificationStatus: 'Not yet sent',
+    notificationHistory: [],
+  },
+}
+
+export function canSendLandownerNotifications(role, profile) {
+  if (role === 'admin') return true
+  if (role === 'districtOfficer' && profile?.district) return true
+  return false
+}
+
+export function getAffectedParcels(role, profile, projectRecords = projects) {
+  const visibleParcels = getVisibleParcels(role, profile, projectRecords)
+  return visibleParcels
+    .filter((parcel) => Boolean(affectedParcelMetadata[parcel.id]))
+    .map((parcel) => {
+      const metadata = affectedParcelMetadata[parcel.id]
+      const projectName = projectRecords.find((project) => project.id === parcel.projectId)?.name || 'Project parcel'
+      return {
+        ...parcel,
+        ...metadata,
+        projectName,
+        affectedFamilyCount: metadata.landownerDetails?.familyMembers || parcel.affectedFamily || 1,
+        affectedArea: metadata.affectedArea || parcel.area,
+        notificationStatus: metadata.notificationStatus || 'Not yet sent',
+      }
+    })
+}
+
+export const configuredAuthorities = [
+  { id: 'central-morth', name: 'Ministry of Road Transport and Highways', level: 'central', projectTypes: ['National Highway', 'National Highways'] },
+  { id: 'central-railways', name: 'Ministry of Railways', level: 'central', projectTypes: ['Railway'] },
+  { id: 'state-up-pwd', name: 'Public Works Department, Uttar Pradesh', level: 'state', state: 'Uttar Pradesh', projectTypes: ['State Highway', 'Road Infrastructure'] },
+  { id: 'state-up-irrigation', name: 'Irrigation Department, Uttar Pradesh', level: 'state', state: 'Uttar Pradesh', projectTypes: ['Irrigation'] },
+  { id: 'state-up-development', name: 'Uttar Pradesh State Industrial Development Authority', level: 'state', state: 'Uttar Pradesh', projectTypes: ['Industrial Corridor'] },
+  { id: 'state-up-revenue', name: 'Revenue Department, Uttar Pradesh', level: 'state', state: 'Uttar Pradesh', projectTypes: ['Other'] },
+  { id: 'state-gujarat-pwd', name: 'Roads and Buildings Department, Gujarat', level: 'state', state: 'Gujarat', projectTypes: ['State Highway', 'Road Infrastructure'] },
+  { id: 'state-gujarat-irrigation', name: 'Water Resources Department, Gujarat', level: 'state', state: 'Gujarat', projectTypes: ['Irrigation'] },
+  { id: 'state-gujarat-development', name: 'Gujarat Industrial Development Corporation', level: 'state', state: 'Gujarat', projectTypes: ['Industrial Corridor'] },
+  { id: 'state-gujarat-revenue', name: 'Revenue Department, Gujarat', level: 'state', state: 'Gujarat', projectTypes: ['Other'] },
+  { id: 'district-up-varanasi', name: 'District Collector / CALA, Varanasi', level: 'district', state: 'Uttar Pradesh', district: 'Varanasi', projectTypes: ['Urban Infrastructure'] },
+  { id: 'district-up-lucknow', name: 'District Collector / CALA, Lucknow', level: 'district', state: 'Uttar Pradesh', district: 'Lucknow', projectTypes: ['Urban Infrastructure'] },
+  { id: 'district-up-mirzapur', name: 'District Collector / CALA, Mirzapur', level: 'district', state: 'Uttar Pradesh', district: 'Mirzapur', projectTypes: ['Urban Infrastructure'] },
+  { id: 'district-up-sultanpur', name: 'District Collector / CALA, Sultanpur', level: 'district', state: 'Uttar Pradesh', district: 'Sultanpur', projectTypes: ['Urban Infrastructure'] },
+  { id: 'district-gujarat-anand', name: 'District Collector / Competent Authority, Anand', level: 'district', state: 'Gujarat', district: 'Anand', projectTypes: ['Urban Infrastructure'] },
+]
+
+export const configuredLocations = [
+  { state: 'Uttar Pradesh', districts: ['Varanasi', 'Lucknow', 'Mirzapur', 'Sultanpur'] },
+  { state: 'Gujarat', districts: ['Anand'] },
+]
+
+const approvalLevelByProjectType = {
+  'National Highway': 'central',
+  'National Highways': 'central',
+  Railway: 'central',
+  'State Highway': 'state',
+  'Road Infrastructure': 'state',
+  Irrigation: 'state',
+  'Industrial Corridor': 'state',
+  'Urban Infrastructure': 'district',
+  Other: 'state',
+}
+
+const purposeTermsByProjectType = {
+  'National Highway': /highway|road|transport|connectivity|corridor|safety|mobility/i,
+  'National Highways': /highway|road|transport|connectivity|corridor|safety|mobility/i,
+  Railway: /rail|transport|connectivity|corridor/i,
+  'State Highway': /highway|road|transport|connectivity|corridor|safety|mobility/i,
+  'Road Infrastructure': /highway|road|transport|connectivity|corridor|safety|mobility/i,
+  Irrigation: /irrigat|water|canal|reservoir/i,
+  'Industrial Corridor': /industrial|logistic|manufactur|employment|corridor|procurement/i,
+  'Urban Infrastructure': /urban|infrastructure|mobility|public|city|drainage|water|connectivity|safety|access/i,
+}
+
+export function getConfiguredAuthorities(level, state, district) {
+  return configuredAuthorities.filter((authority) => authority.level === level &&
+    (level === 'central' || authority.state === state) &&
+    (level !== 'district' || authority.district === district))
+}
+
+export function getRoutingSuggestion({ projectType, state, district, purpose }) {
+  const level = approvalLevelByProjectType[projectType]
+  if (!level || !state || !district || !purpose?.trim()) {
+    return { valid: false, reason: 'Complete the project type, location, and purpose to validate the approval route.' }
+  }
+  const authority = configuredAuthorities.find((item) => item.level === level && item.state === (level === 'central' ? undefined : state) && item.district === (level === 'district' ? district : undefined) && item.projectTypes.includes(projectType))
+  if (!authority) {
+    return { valid: false, reason: `No configured ${level} authority is available for ${projectType} in ${district}, ${state}.` }
+  }
+  const purposeMatches = purposeTermsByProjectType[projectType]?.test(purpose) ?? purpose.trim().length >= 12
+  return {
+    valid: purposeMatches,
+    approvalLevel: level,
+    authority,
+    reason: purposeMatches
+      ? `${projectType} projects with this purpose in ${district}, ${state} are routed to this configured ${level} authority.`
+      : `The stated purpose does not match configured routing rules for ${projectType}. Review the project purpose and location before submission.`,
+  }
+}
+
+export function validateProjectRouting(project) {
+  const suggestion = getRoutingSuggestion(project)
+  const selectedAuthority = configuredAuthorities.find((authority) => authority.id === project.approvalAuthorityId)
+  const valid = Boolean(suggestion.valid && selectedAuthority && project.approvalLevel === suggestion.approvalLevel && selectedAuthority.id === suggestion.authority.id)
+  return {
+    valid,
+    suggestion,
+    selectedAuthority,
+    reason: valid ? suggestion.reason : 'Selected approval authority does not match the configured authority for this project. Please review the project details or select the appropriate authority.',
+  }
+}
+
+export function canReviewProject(project, role, profile) {
+  if (!['nationalOfficer', 'stateOfficer', 'districtOfficer', 'admin'].includes(role)) return false
+  if (role === 'admin') return true
+  const assignedAuthorities = profile?.authorityIds || [profile?.authorityId]
+  if (!assignedAuthorities.includes(project.approvalAuthorityId)) return false
+  if (role === 'nationalOfficer') return project.approvalLevel === 'central'
+  if (role === 'stateOfficer') return project.approvalLevel === 'state' && project.state === profile.state
+  return project.approvalLevel === 'district' && project.state === profile.state && project.district === profile.district
+}
+
+export function getReviewableProjects(role, profile, projectRecords = projects) {
+  const reviewStatuses = ['SUBMITTED', 'UNDER REVIEW', 'RESUBMITTED']
+  return getVisibleProjects(role, profile, projectRecords).filter((project) => reviewStatuses.includes(project.status) && canReviewProject(project, role, profile))
+}
 
 export const companyProfiles = {
   'Arvind Infrastructure Pvt. Ltd.': {
@@ -34,31 +220,30 @@ export const companyProfiles = {
 }
 
 export const rolePermissions = {
-  nationalOfficer: ['/dashboard', '/project-registration', '/projects', '/parcels', '/gis', '/workflow', '/compensation', '/rr', '/alerts', '/documents', '/reports'],
-  stateOfficer: ['/dashboard', '/project-registration', '/projects', '/parcels', '/gis', '/workflow', '/compensation', '/rr', '/alerts', '/documents', '/reports'],
-  districtOfficer: ['/dashboard', '/project-registration', '/projects', '/parcels', '/gis', '/workflow', '/compensation', '/rr', '/field-verification', '/alerts', '/documents', '/reports'],
-  lrb: ['/dashboard', '/project-registration', '/projects', '/gis', '/workflow', '/alerts', '/documents'],
+  nationalOfficer: ['/dashboard', '/review-projects', '/projects', '/parcels', '/affected-parcels', '/gis', '/workflow', '/compensation', '/rr', '/alerts', '/documents', '/reports', '/profile'],
+  stateOfficer: ['/dashboard', '/review-projects', '/projects', '/parcels', '/affected-parcels', '/gis', '/workflow', '/compensation', '/rr', '/alerts', '/documents', '/reports', '/profile'],
+  districtOfficer: ['/dashboard', '/review-projects', '/projects', '/parcels', '/affected-parcels', '/gis', '/workflow', '/compensation', '/rr', '/field-verification', '/alerts', '/documents', '/reports', '/profile'],
+  lrb: ['/dashboard', '/project-registration', '/projects', '/affected-parcels', '/gis', '/workflow', '/alerts', '/documents', '/profile'],
   fieldOfficer: ['/dashboard', '/field-verification', '/gis', '/parcels', '/documents', '/alerts'],
   citizen: ['/citizen', '/citizen/parcel', '/citizen/acquisition-status', '/citizen/compensation', '/citizen/rr-benefits', '/citizen/documents', '/citizen/objections', '/citizen/grievances'],
-  admin: ['/dashboard', '/project-registration', '/projects', '/parcels', '/gis', '/workflow', '/compensation', '/rr', '/field-verification', '/alerts', '/documents', '/reports'],
+  admin: ['/dashboard', '/review-projects', '/projects', '/parcels', '/affected-parcels', '/gis', '/workflow', '/compensation', '/rr', '/field-verification', '/alerts', '/documents', '/reports', '/profile'],
 }
 
 export const roleNavigation = {
   nationalOfficer: [
-    ['/dashboard', 'Dashboard'], ['/project-registration', 'Project Registration'], ['/projects', 'Projects'],
-    ['/alerts', 'Alerts & Escalations'], ['/reports', 'Reports & MIS'],
+    ['/dashboard', 'Dashboard'], ['/review-projects', 'Review Projects'], ['/projects', 'All Projects'], ['/parcels', 'Acquisition Cases'], ['/affected-parcels', 'Affected Parcels'],
+    ['/alerts', 'Alerts'], ['/reports', 'Reports'], ['/profile', 'Profile'],
   ],
   stateOfficer: [
-    ['/dashboard', 'Dashboard'], ['/project-registration', 'Project Registration'], ['/projects', 'Projects'], ['/parcels', 'Acquisition Cases'],
-    ['/alerts', 'Alerts'], ['/reports', 'Reports'],
+    ['/dashboard', 'Dashboard'], ['/review-projects', 'Review Projects'], ['/projects', 'Projects'], ['/parcels', 'Acquisition Cases'], ['/affected-parcels', 'Affected Parcels'],
+    ['/alerts', 'Alerts'], ['/reports', 'Reports'], ['/profile', 'Profile'],
   ],
   districtOfficer: [
-    ['/dashboard', 'Dashboard'], ['/project-registration', 'Project Registration'], ['/projects', 'Projects'], ['/parcels', 'Acquisition Cases'],
-    ['/field-verification', 'Survey & Verification'],
-    ['/documents', 'Documents'], ['/alerts', 'Alerts'], ['/reports', 'Reports'],
+    ['/dashboard', 'Dashboard'], ['/review-projects', 'Review Projects'], ['/projects', 'Projects'], ['/parcels', 'Acquisition Cases'], ['/affected-parcels', 'Affected Parcels'],
+    ['/field-verification', 'Survey Verification Objection'], ['/documents', 'Documents'], ['/alerts', 'Alerts'], ['/reports', 'Reports'], ['/profile', 'Profile'],
   ],
   lrb: [
-    ['/dashboard', 'Dashboard'], ['/project-registration', 'Create Project'], ['/projects', 'Projects'], ['/gis', 'GIS / Alignment'], ['/workflow', 'Project Progress'], ['/alerts', 'Notifications'], ['/documents', 'Documents'],
+    ['/dashboard', 'Dashboard'], ['/projects', 'Projects'], ['/project-registration', 'Create Project Proposal'], ['/affected-parcels', 'Affected Parcels'], ['/workflow', 'Project Progress'], ['/alerts', 'Notifications'], ['/documents', 'Documents'], ['/profile', 'Profile'],
   ],
   fieldOfficer: [
     ['/dashboard', 'Dashboard'], ['/field-verification', 'Assigned field tasks'], ['/parcels', 'Assigned parcels'], ['/gis', 'GIS map'], ['/documents', 'Field documents'], ['/alerts', 'Deadlines & alerts'],
@@ -67,7 +252,7 @@ export const roleNavigation = {
     ['/citizen', 'Overview'], ['/citizen/parcel', 'My Parcel'], ['/citizen/acquisition-status', 'Acquisition Status'], ['/citizen/compensation', 'Compensation'], ['/citizen/rr-benefits', 'R&R Benefits'], ['/citizen/documents', 'My Documents'], ['/citizen/objections', 'My Objections'], ['/citizen/grievances', 'My Grievances'],
   ],
   admin: [
-    ['/dashboard', 'Dashboard'], ['/project-registration', 'Project Registration'], ['/projects', 'Projects'], ['/parcels', 'Parcel records'], ['/gis', 'GIS map'], ['/workflow', 'Acquisition workflow'], ['/compensation', 'Compensation & payment'], ['/rr', 'Resettlement & rehabilitation'], ['/field-verification', 'Field verification'], ['/documents', 'Documents & records'], ['/alerts', 'Alerts'], ['/reports', 'Reports'],
+    ['/dashboard', 'Dashboard'], ['/review-projects', 'Review Projects'], ['/projects', 'Projects'], ['/parcels', 'Parcel records'], ['/affected-parcels', 'Affected Parcels'], ['/gis', 'GIS map'], ['/workflow', 'Acquisition workflow'], ['/compensation', 'Compensation & payment'], ['/rr', 'Resettlement & rehabilitation'], ['/field-verification', 'Field verification'], ['/documents', 'Documents & records'], ['/alerts', 'Alerts'], ['/reports', 'Reports'], ['/profile', 'Profile'],
   ],
 }
 
@@ -262,6 +447,14 @@ export const lrbProjects = [
     userRole: 'lrb',
     createdAt: '2026-09-20T09:10:00.000Z',
     updatedAt: '2026-09-22T08:30:00.000Z',
+    approvalLevel: 'state',
+    approvalAuthorityId: 'state-up-pwd',
+    approvalAuthorityName: 'Public Works Department, Uttar Pradesh',
+    approvalState: 'Uttar Pradesh',
+    approvalDistrict: 'Varanasi',
+    routingStatus: 'NOT VALIDATED',
+    routingValidated: false,
+    routingValidatedAt: null,
     projectCreatedBy: { userId: 'USR007', name: 'Neha Verma', designation: 'Land Requiring Body Officer', department: 'Varanasi Development Authority', role: 'lrb', createdAt: '2026-09-20T09:10:00.000Z' },
     description: 'Proposed ring road expansion for decongestion and intercity connectivity.',
     purpose: 'Improve transport connectivity and reduce congestion near the city core.',
@@ -296,6 +489,15 @@ export const lrbProjects = [
     userRole: 'lrb',
     createdAt: '2026-09-15T12:00:00.000Z',
     updatedAt: '2026-09-28T17:10:00.000Z',
+    approvalLevel: 'state',
+    approvalAuthorityId: 'state-up-irrigation',
+    approvalAuthorityName: 'Irrigation Department, Uttar Pradesh',
+    approvalState: 'Uttar Pradesh',
+    approvalDistrict: 'Varanasi',
+    routingStatus: 'VALIDATED',
+    routingValidated: true,
+    routingValidatedAt: '2026-09-15T12:00:00.000Z',
+    governmentQuery: 'Please provide the updated GIS alignment and confirm affected village boundaries.',
     projectCreatedBy: { userId: 'USR007', name: 'Neha Verma', designation: 'Land Requiring Body Officer', department: 'Varanasi Development Authority', role: 'lrb', createdAt: '2026-09-15T12:00:00.000Z' },
     description: 'Canal alignment to improve irrigation and water distribution to agricultural belt.',
     purpose: 'Support irrigation and regional water management.',
@@ -330,10 +532,153 @@ export const lrbProjects = [
     userRole: 'lrb',
     createdAt: '2026-08-12T08:00:00.000Z',
     updatedAt: '2026-09-25T11:05:00.000Z',
+    approvalLevel: 'state',
+    approvalAuthorityId: 'state-up-development',
+    approvalAuthorityName: 'Uttar Pradesh State Industrial Development Authority',
+    approvalState: 'Uttar Pradesh',
+    approvalDistrict: 'Varanasi',
+    routingStatus: 'VALIDATED',
+    routingValidated: true,
+    routingValidatedAt: '2026-08-12T08:00:00.000Z',
     projectCreatedBy: { userId: 'USR007', name: 'Neha Verma', designation: 'Land Requiring Body Officer', department: 'Varanasi Development Authority', role: 'lrb', createdAt: '2026-08-12T08:00:00.000Z' },
     description: 'Approved access corridor for procurement and logistics project at the university region.',
     purpose: 'Create a dedicated logistics corridor while preserving nearby settlements.',
     category: 'State Government Project',
+  },
+  {
+    id: 'LRB-2026-104',
+    name: 'Varanasi Urban Mobility Link',
+    state: 'Uttar Pradesh',
+    district: 'Varanasi',
+    villages: ['Sundarpur', 'Lanka'],
+    projectType: 'Urban Infrastructure',
+    authority: 'Varanasi Development Authority',
+    totalLandRequired: '18.4 ha',
+    proposedAcquisitionArea: '12.8 ha',
+    totalParcels: 0,
+    acquired: 0,
+    pending: 0,
+    blocked: 0,
+    progress: 5,
+    status: 'SUBMITTED',
+    reviewStatus: 'SUBMITTED',
+    stage: 'UNDER REVIEW',
+    readiness: 'Submitted for district review',
+    daysRemaining: 35,
+    proposalDeadline: '2026-11-04',
+    level: 'lrb',
+    ownerRole: 'lrb',
+    createdByUserId: 'USR007',
+    createdByName: 'Neha Verma',
+    lrbOrganization: 'Varanasi Development Authority',
+    userRole: 'lrb',
+    createdAt: '2026-09-29T09:00:00.000Z',
+    updatedAt: '2026-09-29T09:00:00.000Z',
+    submissionDate: '2026-09-29T09:00:00.000Z',
+    approvalLevel: 'district',
+    approvalAuthorityId: 'district-up-varanasi',
+    approvalAuthorityName: 'District Collector / CALA, Varanasi',
+    approvalState: 'Uttar Pradesh',
+    approvalDistrict: 'Varanasi',
+    routingStatus: 'VALIDATED',
+    routingValidated: true,
+    routingValidatedAt: '2026-09-29T09:00:00.000Z',
+    projectCreatedBy: { userId: 'USR007', name: 'Neha Verma', designation: 'Land Requiring Body Officer', department: 'Varanasi Development Authority', role: 'lrb', createdAt: '2026-09-29T09:00:00.000Z' },
+    description: 'A local mobility connection to improve safe access between residential areas and the transit corridor.',
+    purpose: 'Reduce travel time and improve safe public access in Varanasi.',
+    category: 'State Government Project',
+    documents: [],
+    timeline: [{ status: 'SUBMITTED', description: 'Proposal submitted for government review.', actor: 'Neha Verma', at: '2026-09-29T09:00:00.000Z' }],
+  },
+  {
+    id: 'LRB-2026-105',
+    name: 'Eastern Uttar Pradesh Highway Connector',
+    state: 'Uttar Pradesh',
+    district: 'Lucknow',
+    villages: ['Mohan', 'Kakori'],
+    projectType: 'National Highway',
+    authority: 'National Highways Authority of India',
+    totalLandRequired: '96.2 ha',
+    proposedAcquisitionArea: '64.5 ha',
+    totalParcels: 0,
+    acquired: 0,
+    pending: 0,
+    blocked: 0,
+    progress: 5,
+    status: 'SUBMITTED',
+    reviewStatus: 'SUBMITTED',
+    stage: 'UNDER REVIEW',
+    readiness: 'Submitted for central review',
+    daysRemaining: 50,
+    proposalDeadline: '2026-11-19',
+    level: 'lrb',
+    ownerRole: 'lrb',
+    createdByUserId: 'USR007',
+    createdByName: 'Neha Verma',
+    lrbOrganization: 'Varanasi Development Authority',
+    userRole: 'lrb',
+    createdAt: '2026-09-28T10:00:00.000Z',
+    updatedAt: '2026-09-28T10:00:00.000Z',
+    submissionDate: '2026-09-28T10:00:00.000Z',
+    approvalLevel: 'central',
+    approvalAuthorityId: 'central-morth',
+    approvalAuthorityName: 'Ministry of Road Transport and Highways',
+    approvalState: 'Uttar Pradesh',
+    approvalDistrict: 'Lucknow',
+    routingStatus: 'VALIDATED',
+    routingValidated: true,
+    routingValidatedAt: '2026-09-28T10:00:00.000Z',
+    projectCreatedBy: { userId: 'USR007', name: 'Neha Verma', designation: 'Land Requiring Body Officer', department: 'Varanasi Development Authority', role: 'lrb', createdAt: '2026-09-28T10:00:00.000Z' },
+    description: 'A proposed highway connector to improve regional logistics and reduce congestion on local routes.',
+    purpose: 'Provide a safer high-capacity link between regional transport corridors.',
+    category: 'Central Government Project',
+    documents: [],
+    timeline: [{ status: 'SUBMITTED', description: 'Proposal submitted for government review.', actor: 'Neha Verma', at: '2026-09-28T10:00:00.000Z' }],
+  },
+  {
+    id: 'LRB-2026-106',
+    name: 'Varanasi State Highway Safety Upgrade',
+    state: 'Uttar Pradesh',
+    district: 'Varanasi',
+    villages: ['Rohania', 'Shivpur'],
+    projectType: 'State Highway',
+    authority: 'Varanasi Development Authority',
+    totalLandRequired: '27.3 ha',
+    proposedAcquisitionArea: '16.2 ha',
+    totalParcels: 0,
+    acquired: 0,
+    pending: 0,
+    blocked: 0,
+    progress: 5,
+    status: 'SUBMITTED',
+    reviewStatus: 'SUBMITTED',
+    stage: 'UNDER REVIEW',
+    readiness: 'Submitted for state review',
+    daysRemaining: 39,
+    proposalDeadline: '2026-11-08',
+    level: 'lrb',
+    ownerRole: 'lrb',
+    createdByUserId: 'USR007',
+    createdByName: 'Neha Verma',
+    lrbOrganization: 'Varanasi Development Authority',
+    userRole: 'lrb',
+    createdAt: '2026-09-30T09:00:00.000Z',
+    updatedAt: '2026-09-30T09:00:00.000Z',
+    submissionDate: '2026-09-30T09:00:00.000Z',
+    approvalLevel: 'state',
+    approvalAuthorityId: 'state-up-pwd',
+    approvalAuthorityName: 'Public Works Department, Uttar Pradesh',
+    approvalState: 'Uttar Pradesh',
+    approvalDistrict: 'Varanasi',
+    routingStatus: 'VALIDATED',
+    routingValidated: true,
+    routingValidatedAt: '2026-09-30T09:00:00.000Z',
+    projectCreatedBy: { userId: 'USR007', name: 'Neha Verma', designation: 'Land Requiring Body Officer', department: 'Varanasi Development Authority', role: 'lrb', createdAt: '2026-09-30T09:00:00.000Z' },
+    description: 'Safety improvements and targeted widening for the Varanasi state highway connection.',
+    purpose: 'Improve road safety and reduce congestion along the state highway.',
+    category: 'State Government Project',
+    documents: [],
+    timeline: [{ status: 'SUBMITTED', description: 'Proposal submitted for government review.', actor: 'Neha Verma', at: '2026-09-30T09:00:00.000Z' }],
   },
 ]
 
@@ -719,38 +1064,59 @@ export const citizenPortalData = {
 export function getVisibleProjects(role, profile, projectRecords = projects) {
   if (role === 'citizen') return projectRecords.filter((project) => project.keyParcel === profile?.parcelIds?.[0] || project.keyParcel === defaultCitizenParcelId || project.projectCreatedBy?.role === role)
   if (role === 'fieldOfficer') return projectRecords.filter((project) => profile?.assignedParcelIds?.some((id) => project.keyParcel === id))
-  if (role === 'districtOfficer') return projectRecords.filter((project) => project.district === profile?.jurisdiction || project.ownerRole === role)
-  if (role === 'stateOfficer') return projectRecords.filter((project) => project.state === profile?.jurisdiction || project.ownerRole === role)
-  if (role === 'lrb') return projectRecords.filter((project) => project.ownerRole === 'lrb' || project.projectCreatedBy?.role === 'lrb' || project.createdByUserId === profile?.id || project.lrbOrganization === profile?.organization || (profile && project.projectCreatedBy && project.projectCreatedBy.name === profile.name))
+  if (role === 'districtOfficer') return projectRecords.filter((project) => project.state === profile?.state && project.district === profile?.district)
+  if (role === 'stateOfficer') return projectRecords.filter((project) => project.state === profile?.state)
+  if (role === 'lrb') return projectRecords.filter((project) => project.createdByUserId === profile?.id || (profile?.organization && project.lrbOrganization === profile.organization))
   return projectRecords
 }
 
-export function getVisibleParcels(role, profile) {
+export function getVisibleFieldReports(role, profile, fieldReports = []) {
+  if (role === 'fieldOfficer') return fieldReports.filter((report) => report.fieldOfficerId === profile?.id && profile?.assignedParcelIds?.includes(report.parcelId))
+  if (role === 'districtOfficer') return fieldReports.filter((report) => report.status !== 'DRAFT' && report.state === profile?.state && report.district === profile?.district)
+  if (role === 'stateOfficer') return fieldReports.filter((report) => report.status !== 'DRAFT' && report.state === profile?.state)
+  if (role === 'nationalOfficer' || role === 'admin') return fieldReports.filter((report) => report.status !== 'DRAFT')
+  return []
+}
+
+export function getVisibleParcels(role, profile, projectRecords = projects) {
   if (role === 'citizen') return parcels.filter((parcel) => profile?.parcelIds?.includes(parcel.id))
   if (role === 'fieldOfficer') return parcels.filter((parcel) => profile?.assignedParcelIds?.includes(parcel.id))
-  if (role === 'districtOfficer') return parcels.filter((parcel) => parcel.district === profile?.jurisdiction)
-  if (role === 'stateOfficer') return parcels.filter((parcel) => parcel.state === profile?.jurisdiction)
-  if (role === 'lrb') return parcels.filter((parcel) => parcel.district === profile?.jurisdiction || parcel.state === profile?.jurisdiction)
+  if (role === 'districtOfficer') return parcels.filter((parcel) => parcel.state === profile?.state && parcel.district === profile?.district)
+  if (role === 'stateOfficer') return parcels.filter((parcel) => parcel.state === profile?.state)
+  if (role === 'lrb') {
+    const ownedProjects = getVisibleProjects(role, profile, projectRecords)
+    const ownedProjectIds = new Set(ownedProjects.map((project) => project.id))
+    const ownedParcelIds = new Set(ownedProjects.map((project) => project.keyParcel).filter(Boolean))
+    return parcels.filter((parcel) => ownedProjectIds.has(parcel.projectId) || ownedParcelIds.has(parcel.id))
+  }
   return parcels
 }
 
-export function getVisibleAlerts(role, profile) {
+export function getVisibleAlerts(role, profile, projectRecords = []) {
   if (role === 'citizen') return [{ id: 'CIT-001', title: 'Your compensation payment is under processing.', severity: 'Info', project: 'Your parcel', parcel: profile?.parcelIds?.[0], officer: 'BHU-SETU', deadline: 'Current', status: 'Open' }]
-  if (role === 'lrb') return [
+  if (role === 'lrb') {
+    const projectEvents = getVisibleProjects(role, profile, projectRecords).flatMap((project) => (project.timeline || []).map((event) => ({ id: `${project.id}-${event.at}`, title: `${project.name}: ${event.description}`, severity: 'Info', project: project.name, parcel: project.id, officer: event.actor, deadline: new Date(event.at).toLocaleDateString('en-IN'), status: event.status, role: 'lrb' }))).slice(-5).reverse()
+    const staticAlerts = [
     { id: 'LRB-001', title: 'Project proposal submitted for government review.', severity: 'Info', project: 'Varanasi Ring Road expansion', parcel: 'Draft proposal', officer: 'Government Review Cell', deadline: 'Current', status: 'Open', role: 'lrb' },
     { id: 'LRB-002', title: 'Query raised on project alignment details.', severity: 'Warning', project: 'Varanasi Canal Link Project', parcel: 'Query response pending', officer: 'District Officer', deadline: 'Within 7 days', status: 'Pending', role: 'lrb' },
     { id: 'LRB-003', title: 'Project approval confirmed by government authority.', severity: 'Success', project: 'BHU Procurement Corridor', parcel: 'Acquisition starts', officer: 'State Authority', deadline: 'Current', status: 'Resolved', role: 'lrb' },
-  ]
-  if (role === 'nationalOfficer') return alerts
-  if (role === 'stateOfficer') return alerts.filter((alert) => alert.role !== 'nationalOfficer')
-  if (role === 'fieldOfficer') return alerts.filter((alert) => alert.role === 'gramPanchayatOfficer' || alert.role === 'fieldOfficer')
+    ]
+    return [...projectEvents, ...staticAlerts].slice(0, 5)
+  }
+  const accessibleProjectNames = new Set(getVisibleProjects(role, profile, projectRecords.length ? projectRecords : projects).map((project) => project.name))
+  const scopedAlerts = alerts.filter((alert) => accessibleProjectNames.has(alert.project) && (!alert.parcel || getVisibleParcels(role, profile, projectRecords.length ? projectRecords : projects).some((parcel) => parcel.id === alert.parcel)))
+  if (role === 'nationalOfficer') return scopedAlerts
+  if (role === 'stateOfficer') return scopedAlerts.filter((alert) => alert.role !== 'nationalOfficer')
+  if (role === 'fieldOfficer') return scopedAlerts.filter((alert) => alert.role === 'gramPanchayatOfficer' || alert.role === 'fieldOfficer')
   if (role === 'admin') return alerts
-  return alerts.filter((alert) => alert.role === role || (role === 'districtOfficer' && alert.role === 'fieldOfficer'))
+  return scopedAlerts.filter((alert) => alert.role === role || (role === 'districtOfficer' && alert.role === 'fieldOfficer'))
 }
 
-export function getVisibleDocuments(role, profile) {
+export function getVisibleDocuments(role, profile, projectRecords = projects) {
   if (role === 'citizen') return documents.filter((document) => profile?.parcelIds?.includes(document.parcel))
   if (role === 'fieldOfficer') return documents.filter((document) => profile?.assignedParcelIds?.includes(document.parcel))
   if (role === 'admin') return documents
-  return documents
+  if (role === 'lrb') return getVisibleProjects(role, profile, projectRecords).flatMap((project) => (project.documents || []).map((document, index) => ({ ...document, id: `${project.id}-DOC-${index}`, project: project.name, parcel: project.id, type: 'Project proposal', status: 'Available', version: document.version || 1, date: document.uploadedAt || project.createdAt })))
+  const accessibleParcels = new Set(getVisibleParcels(role, profile, projectRecords).map((parcel) => parcel.id))
+  return documents.filter((document) => accessibleParcels.has(document.parcel))
 }

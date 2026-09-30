@@ -38,10 +38,12 @@ import AlertsPage from './pages/Alerts'
 import DocumentsPage from './pages/Documents'
 import ReportsPage from './pages/Reports'
 import CitizenPortalPage from './pages/CitizenPortal'
+import AffectedParcelsPage from './pages/AffectedParcels'
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Project Registration', path: '/project-registration', icon: FilePlus2 },
+  { name: 'Review Projects', path: '/review-projects', icon: FileText },
   { name: 'Projects', path: '/projects', icon: FolderKanban },
   { name: 'Parcels', path: '/parcels', icon: FileText },
   { name: 'GIS Map', path: '/gis', icon: Map },
@@ -52,10 +54,11 @@ const navItems = [
   { name: 'Alerts', path: '/alerts', icon: AlertTriangle },
   { name: 'Documents', path: '/documents', icon: Briefcase },
   { name: 'Reports', path: '/reports', icon: Gauge },
+  { name: 'Profile', path: '/profile', icon: Users },
   { name: 'Citizen Portal', path: '/citizen', icon: MessageSquareWarning },
 ]
 
-function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRecords }) {
+function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRecords, fieldReports, setFieldReports, landownerNotifications, handleBulkLandownerNotifications }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
@@ -74,22 +77,25 @@ function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRec
   }))
   const searchValue = searchTerm.trim().toLowerCase()
   const searchProjects = role === 'citizen' ? [] : getVisibleProjects(role, profile, projectRecords).filter((project) => `${project.name} ${project.id}`.toLowerCase().includes(searchValue)).slice(0, 4)
-  const searchParcels = getVisibleParcels(role, profile).filter((parcel) => `${parcel.ulpin} ${parcel.surveyNo} ${parcel.village}`.toLowerCase().includes(searchValue)).slice(0, 4)
-  const notifications = getVisibleAlerts(role, profile).slice(0, 5)
+  const searchParcels = getVisibleParcels(role, profile, projectRecords).filter((parcel) => `${parcel.ulpin} ${parcel.surveyNo} ${parcel.village}`.toLowerCase().includes(searchValue)).slice(0, 4)
+  const notifications = getVisibleAlerts(role, profile, projectRecords).slice(0, 5)
 
   const routeMap = {
     '/dashboard': 'Dashboard',
     '/project-registration': 'Project Registration',
+    '/review-projects': 'Review Projects',
     '/projects': 'Projects',
     '/parcels': 'Parcels',
+    '/affected-parcels': 'Affected Parcels',
     '/gis': 'GIS Map',
     '/workflow': 'Workflow',
     '/compensation': 'Compensation & Payment',
     '/rr': 'R&R',
-    '/field-verification': 'Field Verification',
+    '/field-verification': role === 'districtOfficer' ? 'Survey Verification Objection' : 'Field Verification',
     '/alerts': 'Alerts',
     '/documents': 'Documents',
     '/reports': 'Reports',
+    '/profile': 'Profile',
     '/citizen': 'Citizen Portal',
     '/citizen/parcel': 'My Parcel',
     '/citizen/acquisition-status': 'Acquisition Status',
@@ -118,6 +124,10 @@ function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRec
     setSidebarOpen(false)
   }
 
+  const upsertFieldReport = (report) => setFieldReports((current) => current.some((item) => item.id === report.id)
+    ? current.map((item) => item.id === report.id ? report : item)
+    : [report, ...current])
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
@@ -126,7 +136,7 @@ function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRec
             <ShieldCheck size={18} />
           </div>
           <div>
-            <div className="brand-title">BHU-SETU</div>
+            <div className="brand-title">Samanvaya</div>
             <div className="brand-subtitle">Land Acquisition Monitoring Portal</div>
           </div>
           <button className="icon-button mobile-only" onClick={() => setSidebarOpen(false)} aria-label="Close navigation">
@@ -163,7 +173,7 @@ function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRec
               <button className="secondary-btn small" type="button" onClick={() => navigate(-1)} aria-label="Go back">← Back</button>
             )}
             <div>
-              <div className="eyebrow">BHU-SETU</div>
+              <div className="eyebrow">Samanvaya</div>
               <h1>{pageTitle}</h1>
             </div>
           </div>
@@ -205,23 +215,27 @@ function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRec
             <Link className="pill neutral" to="/projects">All projects</Link>
           </nav>}
           <Routes>
-            <Route path="/dashboard" element={<RoleRoute role={role} path="/dashboard"><Dashboard role={role} projectRecords={projectRecords} onProjectCreated={(project) => setProjectRecords((current) => [project, ...current])} /></RoleRoute>} />
-            <Route path="/project-registration" element={<RoleRoute role={role} path="/project-registration"><Dashboard role={role} projectRecords={projectRecords} onProjectCreated={(project) => setProjectRecords((current) => [project, ...current])} registrationMode /></RoleRoute>} />
+            <Route path="/dashboard" element={<RoleRoute role={role} path="/dashboard"><Dashboard role={role} projectRecords={projectRecords} onProjectCreated={(project) => setProjectRecords((current) => [project, ...current])} onProjectUpdated={(project) => setProjectRecords((current) => current.map((item) => item.id === project.id ? project : item))} /></RoleRoute>} />
+            <Route path="/project-registration" element={<RoleRoute role={role} path="/project-registration"><Dashboard role={role} projectRecords={projectRecords} onProjectCreated={(project) => setProjectRecords((current) => [project, ...current])} onProjectUpdated={(project) => setProjectRecords((current) => current.map((item) => item.id === project.id ? project : item))} registrationMode /></RoleRoute>} />
+            <Route path="/review-projects" element={<RoleRoute role={role} path="/review-projects"><ProjectsPage role={role} projectRecords={projectRecords} reviewMode /></RoleRoute>} />
             <Route path="/projects" element={<RoleRoute role={role} path="/projects"><ProjectsPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
-            <Route path="/projects/:projectId" element={<RoleRoute role={role} path="/projects"><ProjectDetailsPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
+            <Route path="/projects/:projectId" element={<RoleRoute role={role} path="/projects"><ProjectDetailsPage role={role} projectRecords={projectRecords} onProjectUpdated={(project) => setProjectRecords((current) => current.map((item) => item.id === project.id ? project : item))} /></RoleRoute>} />
             <Route path="/projects/:projectId/workflow" element={<RoleRoute role={role} path="/projects"><WorkflowPage projectId={location.pathname.split('/')[2]} /></RoleRoute>} />
             <Route path="/projects/:projectId/compensation" element={<RoleRoute role={role} path="/projects"><CompensationPage role={role} projectId={location.pathname.split('/')[2]} /></RoleRoute>} />
             <Route path="/projects/:projectId/rr" element={<RoleRoute role={role} path="/projects"><RnRPage role={role} projectId={location.pathname.split('/')[2]} /></RoleRoute>} />
-            <Route path="/parcels" element={<RoleRoute role={role} path="/parcels"><ParcelListPage role={role} /></RoleRoute>} />
-            <Route path="/parcels/:parcelId" element={<RoleRoute role={role} path="/parcels"><ParcelDetailPage role={role} /></RoleRoute>} />
-            <Route path="/gis" element={<RoleRoute role={role} path="/gis"><GISMapPage role={role} /></RoleRoute>} />
+            <Route path="/parcels" element={<RoleRoute role={role} path="/parcels"><ParcelListPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
+            <Route path="/affected-parcels" element={<RoleRoute role={role} path="/affected-parcels"><AffectedParcelsPage role={role} projectRecords={projectRecords} notificationRecords={landownerNotifications} onNotifyAll={handleBulkLandownerNotifications} /></RoleRoute>} />
+            <Route path="/parcels/:parcelId" element={<RoleRoute role={role} path="/parcels"><ParcelDetailPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
+            <Route path="/gis" element={<RoleRoute role={role} path="/gis"><GISMapPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
             <Route path="/workflow" element={<RoleRoute role={role} path="/workflow"><WorkflowPage role={role} /></RoleRoute>} />
             <Route path="/compensation" element={<RoleRoute role={role} path="/compensation"><CompensationPage role={role} /></RoleRoute>} />
             <Route path="/rr" element={<RoleRoute role={role} path="/rr"><RnRPage role={role} /></RoleRoute>} />
-            <Route path="/field-verification" element={<RoleRoute role={role} path="/field-verification"><FieldVerificationPage role={role} /></RoleRoute>} />
-            <Route path="/alerts" element={<RoleRoute role={role} path="/alerts"><AlertsPage role={role} /></RoleRoute>} />
-            <Route path="/documents" element={<RoleRoute role={role} path="/documents"><DocumentsPage role={role} /></RoleRoute>} />
+            <Route path="/field-verification" element={<RoleRoute role={role} path="/field-verification"><FieldVerificationPage role={role} profile={profile} projectRecords={projectRecords} fieldReports={fieldReports} onFieldReportSave={upsertFieldReport} /></RoleRoute>} />
+            <Route path="/field-verification/:parcelId" element={<RoleRoute role={role} path="/field-verification"><FieldVerificationPage role={role} profile={profile} projectRecords={projectRecords} fieldReports={fieldReports} onFieldReportSave={upsertFieldReport} /></RoleRoute>} />
+            <Route path="/alerts" element={<RoleRoute role={role} path="/alerts"><AlertsPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
+            <Route path="/documents" element={<RoleRoute role={role} path="/documents"><DocumentsPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
             <Route path="/reports" element={<RoleRoute role={role} path="/reports"><ReportsPage role={role} projectRecords={projectRecords} /></RoleRoute>} />
+            <Route path="/profile" element={<RoleRoute role={role} path="/profile"><ProfilePage profile={profile} /></RoleRoute>} />
             <Route path="/citizen" element={<RoleRoute role={role} path="/citizen"><CitizenPortalPage /></RoleRoute>} />
             <Route path="/citizen/parcel" element={<RoleRoute role={role} path="/citizen/parcel"><CitizenPortalPage view="parcel" /></RoleRoute>} />
             <Route path="/citizen/acquisition-status" element={<RoleRoute role={role} path="/citizen/acquisition-status"><CitizenPortalPage view="acquisition-status" /></RoleRoute>} />
@@ -238,10 +252,39 @@ function AppLayout({ role, setRole, setIsLoggedIn, projectRecords, setProjectRec
   )
 }
 
+function ProfilePage({ profile }) {
+  return <div className="stack-block"><div className="section-header"><div><div className="eyebrow">Account</div><h2>Profile</h2></div></div><section className="panel-card profile-details"><div className="avatar">{profile.name.slice(0, 2).toUpperCase()}</div><div><strong>{profile.name}</strong><span>{profile.title}</span><span>{profile.department || profile.organization || profile.jurisdiction}</span><span>{profile.state || profile.jurisdiction}</span>{profile.district && <span>{profile.district}</span>}</div></section></div>
+}
+
 function App() {
   const [role, setRole] = useState('nationalOfficer')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [projectRecords, setProjectRecords] = useState([...projects, ...lrbProjects])
+  const [fieldReports, setFieldReports] = useState([])
+  const [landownerNotifications, setLandownerNotifications] = useState([])
+
+  const handleBulkLandownerNotifications = (affectedParcels) => {
+    const records = affectedParcels.map((parcel) => {
+      const mobile = parcel.landownerDetails?.mobile || '+91 90000 00000'
+      const recipient = parcel.landownerDetails?.name || 'Affected landowner'
+      const notificationId = `NT-${parcel.id.slice(-6)}-${String(Date.now()).slice(-4)}`
+      return {
+        id: `${notificationId}-DOC`,
+        parcelId: parcel.id,
+        projectId: parcel.projectId,
+        projectName: projectRecords.find((project) => project.id === parcel.projectId)?.name || parcel.projectName,
+        recipient,
+        phone: mobile,
+        deliveryStatus: 'Delivered',
+        notificationDate: new Date().toISOString().slice(0, 10),
+        referenceId: notificationId,
+        documentName: `Landowner Notice - ${parcel.ulpin}`,
+        channel: 'SMS / existing notification service',
+      }
+    })
+
+    setLandownerNotifications((current) => [...records, ...current])
+  }
 
   if (!isLoggedIn) {
     return <LoginPage onContinue={(selectedRole) => { setRole(selectedRole); setIsLoggedIn(true) }} />
@@ -249,7 +292,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <AppLayout role={role} setRole={setRole} setIsLoggedIn={setIsLoggedIn} projectRecords={projectRecords} setProjectRecords={setProjectRecords} />
+      <AppLayout role={role} setRole={setRole} setIsLoggedIn={setIsLoggedIn} projectRecords={projectRecords} setProjectRecords={setProjectRecords} fieldReports={fieldReports} setFieldReports={setFieldReports} landownerNotifications={landownerNotifications} handleBulkLandownerNotifications={handleBulkLandownerNotifications} />
     </BrowserRouter>
   )
 }

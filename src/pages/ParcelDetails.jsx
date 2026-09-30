@@ -1,18 +1,14 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { parcels, userProfiles } from '../data/mockData'
+import { getVisibleParcels, userProfiles } from '../data/mockData'
 import { formatCurrency } from '../utils/formatters'
 
-export default function ParcelDetailPage({ role = 'nationalOfficer' }) {
+export default function ParcelDetailPage({ role = 'nationalOfficer', projectRecords }) {
   const { parcelId } = useParams()
   const profile = userProfiles.find((item) => item.role === role)
   const parcel = useMemo(() => {
-    const match = parcels.find((item) => item.ulpin === parcelId)
-    if (!match) return null
-    if (role === 'fieldOfficer' && !profile?.assignedParcelIds?.includes(match.id)) return null
-    if (['districtOfficer', 'rrAdministrator'].includes(role) && match.district !== 'Varanasi') return null
-    return match
-  }, [parcelId, profile, role])
+    return getVisibleParcels(role, profile, projectRecords).find((item) => item.ulpin === parcelId) || null
+  }, [parcelId, profile, role, projectRecords])
 
   if (!parcel) {
     return <div className="panel-card"><h2>Parcel access restricted</h2><p>This parcel is outside your assigned jurisdiction or worklist.</p></div>
